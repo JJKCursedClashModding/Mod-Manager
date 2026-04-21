@@ -1,0 +1,3 @@
+[submodule "AssetRegistryPatcher"]
+	path = AssetRegistryPatcher
+	url = https://github.com/JJKCursedClashModding/AssetRegistryPatcher

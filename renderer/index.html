@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jujutsu Kaisen Cursed Clash Mod Manager</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="sticky-top">
+      <div class="sticky-top-inner">
+        <header>
+          <div class="header-row">
+            <h1>Jujutsu Kaisen Cursed Clash Mod Manager</h1>
+          </div>
+        </header>
+
+        <section class="actions">
+          <button type="button" id="openSettingsBtn">Settings</button>
+          <button type="button" id="openModsFolderBtn" disabled>Open Mods Folder</button>
+          <button type="button" id="packageAllBtn" class="btn-install" disabled>⚙ Install Mods</button>
+          <button type="button" id="launchGameBtn" class="btn-play" disabled>▶ Play</button>
+          <span id="requirementsBadge" class="error-badge" hidden role="alert">
+            Missing Requirements —
+            <button type="button" id="openRequirementsBtn" class="error-badge-link">
+              Fix
+            </button>
+          </span>
+        </section>
+
+        <div class="mods-section-head">
+          <h2 id="modsHeading" class="mods-heading">Mods</h2>
+          <div class="mods-toolbar">
+            <button type="button" id="refreshModsBtn" disabled>Refresh</button>
+            <button type="button" id="enableAllModsBtn" disabled>Enable all</button>
+            <button type="button" id="disableAllModsBtn" disabled>Disable all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="app">
+      <section class="mods-section" aria-labelledby="modsHeading">
+        <ul id="modList" class="mod-list"></ul>
+      </section>
+    </main>
+
+    <div id="settingsModal" class="modal-overlay" hidden>
+      <section class="settings-section modal-panel" aria-labelledby="settingsHeading">
+        <div class="settings-head">
+          <h2 id="settingsHeading" class="settings-heading">Settings</h2>
+          <div class="settings-actions">
+            <button type="button" id="changePathBtn">Change Game EXE</button>
+            <button type="button" id="setUnpackedAssetsPathBtn">Set Unpacked Assets Path</button>
+            <button type="button" id="clearUnpackedAssetsPathBtn" disabled>Reset</button>
+            <button type="button" id="closeSettingsBtn">Close</button>
+          </div>
+        </div>
+        <div id="settingsPaths" class="settings-paths">
+          <p id="modsFolderPath" class="settings-path-line" hidden></p>
+          <p id="gameFolderPath" class="settings-path-line" hidden></p>
+          <p id="unpackedAssetsPath" class="settings-path-line" hidden></p>
+          <label class="settings-verbose-row">
+            <input type="checkbox" id="verboseOutputCheckbox" />
+            <span>Verbose output (show raw command stdout/stderr in console)</span>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <div id="packageModal" class="modal-overlay" hidden>
+      <section class="settings-section modal-panel package-panel" aria-labelledby="packageHeading">
+        <div class="settings-head">
+          <h2 id="packageHeading" class="settings-heading">Packaging Mods</h2>
+          <div class="settings-actions">
+            <button type="button" id="closePackageModalBtn" disabled>Close</button>
+          </div>
+        </div>
+        <p id="packageStepText" class="package-step-text">Waiting...</p>
+        <div class="package-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <div id="packageProgressFill" class="package-progress-fill"></div>
+        </div>
+        <pre id="packageConsole" class="package-console"></pre>
+      </section>
+    </div>
+
+    <div id="requirementsModal" class="modal-overlay" hidden>
+      <section class="settings-section modal-panel requirements-panel" aria-labelledby="requirementsHeading">
+        <div class="settings-head">
+          <h2 id="requirementsHeading" class="settings-heading">Requirements</h2>
+          <div class="settings-actions">
+            <button type="button" id="refreshRequirementsBtn">Refresh</button>
+            <button type="button" id="closeRequirementsBtn">Close</button>
+          </div>
+        </div>
+        <ul id="requirementsList" class="requirements-list" aria-label="Requirements"></ul>
+      </section>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
