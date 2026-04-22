@@ -1,3 +1,4 @@
 build/
 mods/
 node_modules/
+dist/
