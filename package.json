@@ -5,6 +5,9 @@
   "description": "Mod Manager App for Jujutsu Kaisen CC",
   "main": "main.js",
   "scripts": {
+    "postinstall": "npm --prefix ./AssetRegistryPatcher install",
+    "prestart": "npm run patcher:build",
+    "patcher:build": "npm --prefix ./AssetRegistryPatcher run build",
     "start": "electron .",
     "build": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64"

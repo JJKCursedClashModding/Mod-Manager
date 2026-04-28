@@ -172,6 +172,7 @@ function renderMods(mods) {
       { key: "packages", label: "Packages" },
       { key: "assets", label: "Assets" },
       { key: "datatables", label: "Datatables" },
+      { key: "pakAssets", label: "PAK Assets" },
     ];
     for (const row of rows) {
       const ok = Boolean(c[row.key]);
