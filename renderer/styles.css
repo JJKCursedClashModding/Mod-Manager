@@ -355,6 +355,51 @@ button:disabled {
   color: #fff;
 }
 
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  margin-left: 6px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 201, 87, 0.72);
+  background: rgba(180, 130, 20, 0.28);
+  color: #ffe8b0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  max-width: 100%;
+  box-shadow: 0 0 10px rgba(255, 201, 87, 0.18), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.update-badge[hidden] {
+  display: none;
+}
+
+.update-badge-link {
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 222, 148, 0.55);
+  background: rgba(255, 188, 56, 0.18);
+  border-radius: 5px;
+  color: #fff2cf;
+  font: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.update-badge-link:hover {
+  background: rgba(255, 188, 56, 0.34);
+  border-color: rgba(255, 227, 162, 0.8);
+  color: #fff;
+}
+
 .mods-section {
   font-size: 12px;
   line-height: 1.4;

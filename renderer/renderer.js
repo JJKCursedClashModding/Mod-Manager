@@ -23,6 +23,9 @@ const setUnpackedAssetsPathBtn = document.getElementById("setUnpackedAssetsPathB
 const clearUnpackedAssetsPathBtn = document.getElementById("clearUnpackedAssetsPathBtn");
 const requirementsBadge = document.getElementById("requirementsBadge");
 const openRequirementsBtn = document.getElementById("openRequirementsBtn");
+const updateBadge = document.getElementById("updateBadge");
+const updateBadgeText = document.getElementById("updateBadgeText");
+const openLatestReleaseBtn = document.getElementById("openLatestReleaseBtn");
 const requirementsModalEl = document.getElementById("requirementsModal");
 const closeRequirementsBtn = document.getElementById("closeRequirementsBtn");
 const refreshRequirementsBtn = document.getElementById("refreshRequirementsBtn");
@@ -33,6 +36,7 @@ let currentModsFolder = null;
 /** Last full state from main; used to restore UI after bulk actions fail. */
 let lastModsState = null;
 let packageModalCanClose = false;
+let latestReleaseUrl = null;
 
 /** Closes whichever mod Tools menu is open (set when a menu opens). */
 let activeModToolsClose = null;
@@ -432,7 +436,7 @@ function renderRequirements(statuses) {
         actions.appendChild(downloadBtn);
       }
 
-      if (req.zipPath && req.installPath) {
+      if ((req.zipPath && req.installPath) || req.exePath) {
         const installBtn = document.createElement("button");
         installBtn.type = "button";
         installBtn.className = "req-action-btn req-action-btn--install";
@@ -481,6 +485,36 @@ async function loadAndRenderRequirements() {
   }
 }
 
+function renderAppUpdateStatus(status) {
+  if (!updateBadge || !openLatestReleaseBtn || !status || status.ok !== true) {
+    if (updateBadge) {
+      updateBadge.hidden = true;
+    }
+    latestReleaseUrl = null;
+    return;
+  }
+  if (!status.hasRelease || status.upToDate) {
+    updateBadge.hidden = true;
+    latestReleaseUrl = null;
+    return;
+  }
+  const latest = status.latestVersion || "latest";
+  if (updateBadgeText) {
+    updateBadgeText.textContent = `Update available (${latest}) —`;
+  }
+  updateBadge.hidden = false;
+  latestReleaseUrl = status.latestUrl || null;
+}
+
+async function checkAndRenderAppUpdateStatus() {
+  try {
+    const status = await window.modManagerApi.checkAppUpdate();
+    renderAppUpdateStatus(status);
+  } catch {
+    renderAppUpdateStatus(null);
+  }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 function applyState(result) {
@@ -523,7 +557,10 @@ function applyState(result) {
 }
 
 async function init() {
-  const result = await window.modManagerApi.initApp();
+  const [result] = await Promise.all([
+    window.modManagerApi.initApp(),
+    checkAndRenderAppUpdateStatus(),
+  ]);
   applyState(result);
 }
 
@@ -531,6 +568,17 @@ async function init() {
 
 openRequirementsBtn?.addEventListener("click", () => {
   setRequirementsModalOpen(true);
+});
+
+openLatestReleaseBtn?.addEventListener("click", async () => {
+  if (!latestReleaseUrl) {
+    return;
+  }
+  try {
+    await window.modManagerApi.openExternalUrl(latestReleaseUrl);
+  } catch {
+    /* ignore */
+  }
 });
 
 closeRequirementsBtn?.addEventListener("click", () => {

@@ -25,4 +25,5 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   launchGame: () => ipcRenderer.invoke("launch-game"),
   checkRequirements: () => ipcRenderer.invoke("check-requirements"),
   installRequirement: (reqId) => ipcRenderer.invoke("install-requirement", reqId),
+  checkAppUpdate: () => ipcRenderer.invoke("check-app-update"),
 });
