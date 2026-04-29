@@ -9,12 +9,14 @@
     "prestart": "npm run patcher:build",
     "patcher:build": "npm --prefix ./AssetRegistryPatcher run build",
     "start": "electron .",
+    "prebuild": "npm run patcher:build",
     "build": "electron-builder --win --x64",
+    "prebuild:portable": "npm run patcher:build",
     "build:portable": "electron-builder --win portable --x64"
   },
   "build": {
     "appId": "com.jjkcc.modmanager",
-    "productName": "JJKCCModManager",
+    "productName": "JJK CC Mod Manager",
     "directories": {
       "output": "dist"
     },
@@ -35,6 +37,18 @@
       {
         "from": "data",
         "to": "data"
+      },
+      {
+        "from": "install",
+        "to": "install"
+      },
+      {
+        "from": "AssetRegistryPatcher/dist",
+        "to": "AssetRegistryPatcher/dist"
+      },
+      {
+        "from": "AssetRegistryPatcher/package.json",
+        "to": "AssetRegistryPatcher/package.json"
       }
     ],
     "win": {
