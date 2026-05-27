@@ -12,6 +12,7 @@ const modsFolderPathEl = document.getElementById("modsFolderPath");
 const gameFolderPathEl = document.getElementById("gameFolderPath");
 const unpackedAssetsPathEl = document.getElementById("unpackedAssetsPath");
 const modListEl = document.getElementById("modList");
+const installModBtn = document.getElementById("installModBtn");
 const packageAllBtn = document.getElementById("packageAllBtn");
 const launchGameBtn = document.getElementById("launchGameBtn");
 const changePathBtn = document.getElementById("changePathBtn");
@@ -522,6 +523,9 @@ function applyState(result) {
   const hasModsRoot = Boolean(currentModsFolder);
   const modCount = Array.isArray(result.mods) ? result.mods.length : 0;
   packageAllBtn.disabled = !hasModsRoot;
+  if (installModBtn) {
+    installModBtn.disabled = !hasModsRoot;
+  }
   if (launchGameBtn) {
     launchGameBtn.disabled = !result.gameLocation;
   }
@@ -664,6 +668,40 @@ openModsFolderBtn?.addEventListener("click", async () => {
   }
 });
 
+installModBtn?.addEventListener("click", async () => {
+  if (!currentModsFolder) {
+    return;
+  }
+  installModBtn.disabled = true;
+  try {
+    const result = await window.modManagerApi.installModFromZip();
+    if (result.cancelled) {
+      return;
+    }
+    if (result.action === "unchanged") {
+      alert(
+        `Mod "${result.modFolderName}" is already up to date.\n` +
+          `Installed: v${result.existingVersion}\n` +
+          `Zip: v${result.incomingVersion}`,
+      );
+      return;
+    }
+    applyState(result);
+    if (result.action === "updated") {
+      alert(
+        `Mod updated to v${result.incomingVersion} (was v${result.existingVersion}):\n` +
+          `${result.modFolderPath}`,
+      );
+    } else {
+      alert(`Mod installed (v${result.incomingVersion}):\n${result.modFolderPath}`);
+    }
+  } catch (error) {
+    alert(`Could not install mod:\n${error.message}`);
+  } finally {
+    installModBtn.disabled = !currentModsFolder;
+  }
+});
+
 changePathBtn.addEventListener("click", async () => {
   const result = await window.modManagerApi.changeGameLocation();
   if (!result.cancelled) {
@@ -737,9 +775,9 @@ packageAllBtn.addEventListener("click", async () => {
   if (packageConsoleEl) {
     packageConsoleEl.textContent = "";
   }
-  setPackageModalTitle("Installing Mods");
-  setPackageProgress(0, "Starting installation");
-  appendPackageLog("[info] Installation started");
+  setPackageModalTitle("Load Enabled Mods");
+  setPackageProgress(0, "Starting");
+  appendPackageLog("[info] Loading enabled mods…");
   setPackageModalOpen(true);
 
   try {

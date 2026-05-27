@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   setUnpackedAssetsPath: () => ipcRenderer.invoke("set-unpacked-assets-path"),
   clearUnpackedAssetsPath: () => ipcRenderer.invoke("clear-unpacked-assets-path"),
   packageAllMods: (modsFolder) => ipcRenderer.invoke("package-all-mods", modsFolder),
+  installModFromZip: () => ipcRenderer.invoke("install-mod-from-zip"),
   onPackageProgress: (callback) => {
     const handler = (_, payload) => callback(payload);
     ipcRenderer.on("package-progress", handler);
