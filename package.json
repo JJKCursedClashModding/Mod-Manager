@@ -1,7 +1,7 @@
 {
   "name": "jjkccmodmanager",
   "productName": "JJK CC Mod Manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Mod Manager App for Jujutsu Kaisen CC",
   "main": "main.js",
   "scripts": {
