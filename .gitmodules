@@ -1,3 +1,6 @@
 [submodule "AssetRegistryPatcher"]
 	path = AssetRegistryPatcher
 	url = https://github.com/JJKCursedClashModding/AssetRegistryPatcher
+[submodule "CookedDatatablePatcher"]
+	path = CookedDatatablePatcher
+	url = https://github.com/JJKCursedClashModding/CookedDatatablePatcher
