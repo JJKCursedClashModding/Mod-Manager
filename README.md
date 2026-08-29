@@ -123,13 +123,15 @@ When you click **Install Mods**, the app:
 1. Resolves enabled mods and applies mod priority (low to high, high priority wins on conflicts).
 2. Clears the game `Content/Paks/~mods` folder for a clean deployment.
 3. Clears any stale `Content/DataTables/_ModManager` folder from older installs.
-4. Combines `datatables/*.json` and patches matching cooked tables from `data/datatables` into the IoStore staging tree.
+4. Combines `datatables/*.json` into a temp patch set.
 5. Builds merged `AssetRegistry.bin`.
-6. Stages loose assets and produces:
+6. Stages loose assets from enabled mods.
+7. Patches cooked tables from `data/datatables` into staging (after assets, so JSON patches win over any cooked DataTables shipped in `assets/`).
+8. Produces:
    - `build/output/zModLoader_P.pak`
    - `build/output/zModLoader_P.utoc`
    - `build/output/zModLoader_P.ucas`
-7. Copies generated files (plus any mod prebuilt packages) to:
+9. Copies generated files (plus any mod prebuilt packages) to:
    - `Content/Paks/~mods`
 
 ## Project Scripts
