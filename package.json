@@ -1,13 +1,13 @@
 {
   "name": "jjkccmodmanager",
   "productName": "JJK CC Mod Manager",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Mod Manager App for Jujutsu Kaisen CC",
   "main": "main.js",
   "scripts": {
-    "postinstall": "npm --prefix ./AssetRegistryPatcher install",
+    "postinstall": "npm --prefix ./AssetRegistryPatcher install && npm --prefix ./CookedDatatablePatcher install",
     "prestart": "npm run patcher:build",
-    "patcher:build": "npm --prefix ./AssetRegistryPatcher run build",
+    "patcher:build": "npm --prefix ./AssetRegistryPatcher run build && npm --prefix ./CookedDatatablePatcher run build",
     "start": "electron .",
     "prebuild": "npm run patcher:build",
     "build": "electron-builder --win --x64",
@@ -49,6 +49,18 @@
       {
         "from": "AssetRegistryPatcher/package.json",
         "to": "AssetRegistryPatcher/package.json"
+      },
+      {
+        "from": "CookedDatatablePatcher/dist",
+        "to": "CookedDatatablePatcher/dist"
+      },
+      {
+        "from": "CookedDatatablePatcher/package.json",
+        "to": "CookedDatatablePatcher/package.json"
+      },
+      {
+        "from": "CookedDatatablePatcher/mappings.usmap",
+        "to": "CookedDatatablePatcher/mappings.usmap"
       }
     ],
     "win": {

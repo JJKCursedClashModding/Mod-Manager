@@ -28,7 +28,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
   - `datatables/`
   - `pak_assets/`
 - Installs all enabled mods via one pipeline:
-  - merges DataTable JSON files
+  - merges DataTable JSON files and patches cooked DataTables
   - merges AssetRegistry entries
   - stages loose assets
   - builds IoStore files (`.utoc/.ucas`) via `retoc`
@@ -47,8 +47,6 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
 The app also checks runtime modding dependencies from the Requirements modal, including:
 
 - UTOC Signature Bypass
-- DataTable Patcher
-- UE4SS
 
 ## Installation (From Source)
 
@@ -56,7 +54,7 @@ The app also checks runtime modding dependencies from the Requirements modal, in
 npm install
 ```
 
-`postinstall` also installs dependencies for `AssetRegistryPatcher`.
+`postinstall` also installs dependencies for `AssetRegistryPatcher` and `CookedDatatablePatcher`.
 
 ## Run
 
@@ -88,7 +86,7 @@ A mod can contain any of the following:
 - `manifest.json` (metadata such as title/description/priority)
 - `AssetRegistry.json` (array of asset registry entries)
 - `assets/` (loose files mirroring game-relative content structure)
-- `datatables/*.json` (merged by filename into `_ModManager`)
+- `datatables/*.json` (merged by filename, then applied to cooked DataTables)
 - `pak_assets/` (files added into the generated registry pak)
 - prebuilt package files in mod root:
   - `*.pak`
@@ -124,20 +122,20 @@ When you click **Install Mods**, the app:
 
 1. Resolves enabled mods and applies mod priority (low to high, high priority wins on conflicts).
 2. Clears the game `Content/Paks/~mods` folder for a clean deployment.
-3. Combines `datatables/*.json` into:
-   - `Content/DataTables/_ModManager/*.json`
-4. Builds merged `AssetRegistry.bin`.
-5. Stages loose assets and produces:
+3. Clears any stale `Content/DataTables/_ModManager` folder from older installs.
+4. Combines `datatables/*.json` and patches matching cooked tables from `data/datatables` into the IoStore staging tree.
+5. Builds merged `AssetRegistry.bin`.
+6. Stages loose assets and produces:
    - `build/output/zModLoader_P.pak`
    - `build/output/zModLoader_P.utoc`
    - `build/output/zModLoader_P.ucas`
-6. Copies generated files (plus any mod prebuilt packages) to:
+7. Copies generated files (plus any mod prebuilt packages) to:
    - `Content/Paks/~mods`
 
 ## Project Scripts
 
-- `npm start` - build patcher then launch Electron app
-- `npm run patcher:build` - build `AssetRegistryPatcher`
+- `npm start` - build patchers then launch Electron app
+- `npm run patcher:build` - build `AssetRegistryPatcher` and `CookedDatatablePatcher`
 - `npm run build` - package app via `electron-builder` (Windows x64)
 - `npm run build:portable` - portable Windows package
 
@@ -148,7 +146,8 @@ When you click **Install Mods**, the app:
 - `lib/` - packaging pipeline, IPC handlers, helpers
 - `renderer/` - UI markup, styles, frontend logic
 - `AssetRegistryPatcher/` - registry patcher project
-- `data/` - baseline data (including `DefaultGame.ini`)
+- `CookedDatatablePatcher/` - cooked DataTable patcher project
+- `data/` - baseline data (including `DefaultGame.ini` and cooked datatables)
 - `tools/` - external tool binaries/resources used by packaging
 
 ## Notes
@@ -158,9 +157,9 @@ When you click **Install Mods**, the app:
 
 ## Credits
 
-## Credits
 This project utilizes the following open-source components:
 
-* **[UniversalSigBypasser](https://github.com/rm-NoobInCoding/UniversalSigBypasser)** by [rm-NoobInCoding](https://github.com/rm-NoobInCoding) 
+* **[UniversalSigBypasser](https://github.com/rm-NoobInCoding/UniversalSigBypasser)** by [rm-NoobInCoding](https://github.com/rm-NoobInCoding)
   * Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+* **[CookedDatatablePatcher](https://github.com/JJKCursedClashModding/CookedDatatablePatcher)** by [JJKCursedClashModding](https://github.com/JJKCursedClashModding)
 
