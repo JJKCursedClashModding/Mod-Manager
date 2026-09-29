@@ -96,9 +96,6 @@
     "electron": "^41.1.1",
     "electron-builder": "^26.8.1"
   },
-  "directories": {
-    "lib": "lib"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JJKCursedClashModding/Mod-Manager.git"
