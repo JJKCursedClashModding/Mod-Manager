@@ -24,6 +24,7 @@
       "main.js",
       "preload.js",
       "lib/**",
+      "scripts/**",
       "renderer/**",
       "data/**",
       "tools/**",
@@ -65,9 +66,18 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": null,
+      "icon": "renderer/assets/icon.ico",
       "signAndEditExecutable": false
     },
+    "fileAssociations": [
+      {
+        "ext": "jjkmod",
+        "name": "JJK Mod Package",
+        "description": "Jujutsu Kaisen Cursed Clash mod package",
+        "role": "Editor",
+        "icon": "renderer/assets/icon.ico"
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -85,5 +95,16 @@
   "devDependencies": {
     "electron": "^41.1.1",
     "electron-builder": "^26.8.1"
-  }
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JJKCursedClashModding/Mod-Manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JJKCursedClashModding/Mod-Manager/issues"
+  },
+  "homepage": "https://github.com/JJKCursedClashModding/Mod-Manager#readme"
 }

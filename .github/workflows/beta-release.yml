@@ -1,0 +1,80 @@
+name: Beta release
+
+# Builds the Windows exes (installer + portable) and publishes them to a
+# floating `beta` prerelease tag. Runs the build on PRs too, but only
+# publishes on pushes to main or manual dispatch.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: beta-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write # needed to create/update the beta release
+    steps:
+      - name: Checkout (with patcher submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            AssetRegistryPatcher/package-lock.json
+            CookedDatatablePatcher/package-lock.json
+
+      # postinstall also installs the AssetRegistryPatcher /
+      # CookedDatatablePatcher dependencies.
+      - name: Install dependencies
+        run: npm ci
+
+      # `prebuild` compiles both patchers before electron-builder runs.
+      - name: Build installer (NSIS)
+        run: npm run build -- --publish never
+
+      - name: Build portable exe
+        run: npm run build:portable -- --publish never
+
+      - name: List artifacts
+        run: Get-ChildItem dist/*.exe
+
+      # Rename exes so each beta is identifiable: the version stays frozen
+      # (see README), so the UTC date + commit go into the filename instead.
+      # Renaming is safe: neither the NSIS installer nor the portable exe
+      # depends on its own filename (no latest.yml/blockmap is published).
+      - name: Stamp beta filenames with date
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          $stamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+          $sha = $env:GITHUB_SHA.Substring(0, 7)
+          Get-ChildItem dist/*.exe | ForEach-Object {
+            $newName = "$($_.BaseName)-beta-$stamp-$sha$($_.Extension)"
+            Rename-Item -LiteralPath $_.FullName -NewName $newName
+            Write-Host "$($_.Name) -> $newName"
+          }
+
+      - name: Publish to `beta` tag
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $stamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+          $sha = $env:GITHUB_SHA.Substring(0, 7)
+          gh release delete beta --yes --cleanup-tag 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Host "No existing 'beta' release to replace." }
+          gh release create beta --prerelease `
+            --title "Beta build $stamp ($sha)" `
+            --notes "Automated beta build from ``main`` @ $env:GITHUB_SHA ($stamp UTC). Filenames carry the build date and commit. Pre-release software, expect bugs. Windows SmartScreen will warn because the exes are unsigned — click More info / Run anyway." `
+            dist/*.exe

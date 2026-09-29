@@ -4,105 +4,227 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jujutsu Kaisen Cursed Clash Mod Manager</title>
+    <link rel="icon" type="image/png" href="./assets/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="./assets/logo.svg" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="sticky-top">
-      <div class="sticky-top-inner">
-        <header>
-          <div class="header-row">
-            <h1>Jujutsu Kaisen Cursed Clash Mod Manager</h1>
-          </div>
-        </header>
+    <div class="bg-glow" aria-hidden="true"></div>
 
-        <section class="actions">
-          <button type="button" id="openSettingsBtn">Settings</button>
-          <button type="button" id="openModsFolderBtn" disabled>Open Mods Folder</button>
-          <button type="button" id="installModBtn" class="btn-primary" disabled>Install Mod</button>
-          <button type="button" id="packageAllBtn" class="btn-install" disabled>⚙ Load Enabled Mods</button>
-          <button type="button" id="launchGameBtn" class="btn-play" disabled>▶ Play</button>
-          <span id="requirementsBadge" class="error-badge" hidden role="alert">
-            Missing Requirements —
-            <button type="button" id="openRequirementsBtn" class="error-badge-link">
-              Fix
-            </button>
-          </span>
-          <span id="updateBadge" class="update-badge" hidden role="status">
-            <span id="updateBadgeText">New version available —</span>
-            <button type="button" id="openLatestReleaseBtn" class="update-badge-link">
-              Update
-            </button>
-          </span>
-        </section>
-
-        <div class="mods-section-head">
-          <h2 id="modsHeading" class="mods-heading">Mods</h2>
-          <div class="mods-toolbar">
-            <button type="button" id="refreshModsBtn" disabled>Refresh</button>
-            <button type="button" id="enableAllModsBtn" disabled>Enable all</button>
-            <button type="button" id="disableAllModsBtn" disabled>Disable all</button>
+    <div class="app-shell">
+      <!-- ══ Top bar ═══════════════════════════════════════════════ -->
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-mark brand-logo" src="./assets/logo.svg" width="44" height="44" alt="JJK Mod Manager logo" />
+          <div class="brand-text">
+            <h1>JJK Mod Manager</h1>
+            <p class="brand-sub">Jujutsu Kaisen <span class="brand-sub-accent">Cursed Clash</span></p>
           </div>
         </div>
-      </div>
-    </div>
 
-    <main class="app">
-      <section class="mods-section" aria-labelledby="modsHeading">
-        <ul id="modList" class="mod-list"></ul>
-      </section>
-    </main>
+        <div class="topbar-actions">
+          <span id="requirementsBadge" class="pill pill-danger" hidden role="alert">
+            <span class="pill-dot"></span>
+            <span>Requirements missing</span>
+            <button type="button" id="openRequirementsBtn" class="pill-btn">Fix</button>
+          </span>
+          <span id="updateBadge" class="pill pill-warning" hidden role="status">
+            <span class="pill-dot"></span>
+            <span id="updateBadgeText">Update available</span>
+            <button type="button" id="openLatestReleaseBtn" class="pill-btn">Update</button>
+          </span>
 
-    <div id="settingsModal" class="modal-overlay" hidden>
-      <section class="settings-section modal-panel" aria-labelledby="settingsHeading">
-        <div class="settings-head">
-          <h2 id="settingsHeading" class="settings-heading">Settings</h2>
-          <div class="settings-actions">
-            <button type="button" id="changePathBtn">Change Game EXE</button>
-            <button type="button" id="setUnpackedAssetsPathBtn">Set Unpacked Assets Path</button>
-            <button type="button" id="clearUnpackedAssetsPathBtn" disabled>Reset</button>
-            <button type="button" id="closeSettingsBtn">Close</button>
+          <div class="btn-group">
+            <button type="button" id="openSettingsBtn" class="btn btn-ghost" title="Settings">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2L3.4 12.6"/></svg>
+              <span>Settings</span>
+            </button>
+            <button type="button" id="openModsFolderBtn" class="btn btn-ghost" disabled title="Open mods folder in Explorer">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5a1 1 0 0 1 1-1h3l1.5 2h6a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1z"/></svg>
+              <span>Mods folder</span>
+            </button>
+<button type="button" id="installModBtn" class="btn btn-ghost" disabled title="Add a mod from a .zip file to your library">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3M2.5 12.5h11"/></svg>
+<span>Add mod</span>
+            </button>
+<button type="button" id="packageAllBtn" class="btn btn-primary" disabled title="Merge enabled mods and install them into the game">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5 14 5v6l-6 3.5L2 11V5z"/><path d="M2 5l6 3.5L14 5M8 8.5V14"/></svg>
+<span>Install enabled mods</span>
+            </button>
+            <button type="button" id="launchGameBtn" class="btn btn-play" disabled title="Launch the game">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 2.5v11l8-5.5z"/></svg>
+              <span>Play</span>
+            </button>
           </div>
         </div>
-        <div id="settingsPaths" class="settings-paths">
-          <p id="modsFolderPath" class="settings-path-line" hidden></p>
-          <p id="gameFolderPath" class="settings-path-line" hidden></p>
-          <p id="unpackedAssetsPath" class="settings-path-line" hidden></p>
-          <label class="settings-verbose-row">
-            <input type="checkbox" id="verboseOutputCheckbox" />
-            <span>Verbose output (show raw command stdout/stderr in console)</span>
+      </header>
+
+      <!-- ══ Library toolbar ═══════════════════════════════════════ -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h2 id="modsHeading" class="mods-heading">Mod library</h2>
+          <span id="modCountBadge" class="count-badge" title="Enabled / total mods">0 / 0 enabled</span>
+        </div>
+
+        <div class="toolbar-center">
+          <label class="search-box">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>
+            <input type="search" id="modSearchInput" placeholder="Search mods…" autocomplete="off" aria-label="Search mods" />
+            <button type="button" id="clearSearchBtn" class="search-clear" hidden aria-label="Clear search">✕</button>
+          </label>
+          <div class="segmented" role="tablist" aria-label="Filter mods">
+            <button type="button" class="segmented-btn is-active" data-filter="all" role="tab" aria-selected="true">All</button>
+            <button type="button" class="segmented-btn" data-filter="enabled" role="tab" aria-selected="false">Enabled</button>
+            <button type="button" class="segmented-btn" data-filter="disabled" role="tab" aria-selected="false">Disabled</button>
+          </div>
+          <label class="sort-wrap" title="Sort mods">
+            <span class="sort-label">Sort</span>
+            <select id="modSortSelect" aria-label="Sort mods">
+              <option value="priority">Priority ↓</option>
+              <option value="name">Name A–Z</option>
+              <option value="enabled">Enabled first</option>
+            </select>
           </label>
         </div>
-      </section>
+
+        <div class="toolbar-right">
+          <button type="button" id="conflictsBtn" class="btn btn-small conflicts-btn" hidden title="Show files that overlap between enabled mods">
+            <span aria-hidden="true">⚠</span>
+            <span id="conflictsCount">0 overlaps</span>
+          </button>
+          <button type="button" id="refreshModsBtn" class="btn btn-small btn-ghost" disabled title="Rescan mods folder">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.5v3h-3"/></svg>
+            <span>Refresh</span>
+          </button>
+          <button type="button" id="enableAllModsBtn" class="btn btn-small btn-ghost" disabled>Enable all</button>
+          <button type="button" id="disableAllModsBtn" class="btn btn-small btn-ghost" disabled>Disable all</button>
+        </div>
+      </div>
+
+      <!-- ══ Mod list ══════════════════════════════════════════════ -->
+      <main class="app">
+        <ul id="modList" class="mod-list" aria-live="polite"></ul>
+      </main>
+
+      <!-- ══ Status bar ════════════════════════════════════════════ -->
+      <footer class="statusbar" aria-label="Status">
+        <span class="status-item" id="statusModsFolder" title="Mods folder">
+          <span class="status-dot" id="statusModsDot"></span>
+          <span id="statusModsText">No mods folder</span>
+        </span>
+        <span class="status-sep" aria-hidden="true"></span>
+        <span class="status-item" id="statusGameFolder" title="Game location">
+          <span class="status-dot" id="statusGameDot"></span>
+          <span id="statusGameText">No game linked</span>
+        </span>
+        <span class="status-spacer"></span>
+        <span class="status-item status-hint">Tip: higher priority mods win file conflicts</span>
+      </footer>
     </div>
 
-    <div id="packageModal" class="modal-overlay" hidden>
-      <section class="settings-section modal-panel package-panel" aria-labelledby="packageHeading">
-        <div class="settings-head">
-          <h2 id="packageHeading" class="settings-heading">Packaging Mods</h2>
-          <div class="settings-actions">
-            <button type="button" id="closePackageModalBtn" disabled>Close</button>
+    <!-- ══ Settings modal ═════════════════════════════════════════ -->
+    <div id="settingsModal" class="modal-overlay" hidden>
+      <section class="modal-panel" aria-labelledby="settingsHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="settingsHeading" class="modal-title">Settings</h2>
+            <p class="modal-sub">Game location, folders and output options</p>
+          </div>
+          <button type="button" id="closeSettingsBtn" class="btn btn-small btn-ghost">✕ Close</button>
+        </div>
+
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h3 class="setting-card-title">Game</h3>
+            <p id="gameFolderPath" class="path-line" hidden></p>
+            <div class="setting-row">
+              <button type="button" id="changePathBtn" class="btn btn-small btn-secondary">Change game EXE…</button>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="setting-card-title">Mods folder</h3>
+            <p id="modsFolderPath" class="path-line" hidden></p>
+            <div class="setting-row">
+              <button type="button" id="setModsFolderOverrideBtn" class="btn btn-small btn-secondary">Set custom…</button>
+              <button type="button" id="clearModsFolderOverrideBtn" class="btn btn-small btn-ghost" disabled>Reset to default</button>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="setting-card-title">Unpacked assets</h3>
+            <p id="unpackedAssetsPath" class="path-line" hidden></p>
+            <div class="setting-row">
+              <button type="button" id="setUnpackedAssetsPathBtn" class="btn btn-small btn-secondary">Set path…</button>
+              <button type="button" id="clearUnpackedAssetsPathBtn" class="btn btn-small btn-ghost" disabled>Reset</button>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="setting-card-title">Output</h3>
+            <label class="check-row">
+              <input type="checkbox" id="verboseOutputCheckbox" />
+              <span class="check-ui" aria-hidden="true"></span>
+              <span class="check-text">Verbose output <em>— show raw command stdout/stderr in the packaging console</em></span>
+            </label>
           </div>
         </div>
-        <p id="packageStepText" class="package-step-text">Waiting...</p>
-        <div class="package-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-          <div id="packageProgressFill" class="package-progress-fill"></div>
-        </div>
-        <pre id="packageConsole" class="package-console"></pre>
       </section>
     </div>
 
+    <!-- ══ Packaging modal ════════════════════════════════════════ -->
+    <div id="packageModal" class="modal-overlay" hidden>
+      <section class="modal-panel modal-wide" aria-labelledby="packageHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+<h2 id="packageHeading" class="modal-title">Install enabled mods</h2>
+            <p id="packageStepText" class="modal-sub">Waiting…</p>
+          </div>
+          <button type="button" id="closePackageModalBtn" class="btn btn-small btn-ghost" disabled>✕ Close</button>
+        </div>
+        <div class="package-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Packaging progress">
+          <div id="packageProgressFill" class="package-progress-fill"></div>
+        </div>
+        <pre id="packageConsole" class="package-console" aria-live="polite"></pre>
+      </section>
+    </div>
+
+    <!-- ══ Requirements modal ═════════════════════════════════════ -->
     <div id="requirementsModal" class="modal-overlay" hidden>
-      <section class="settings-section modal-panel requirements-panel" aria-labelledby="requirementsHeading">
-        <div class="settings-head">
-          <h2 id="requirementsHeading" class="settings-heading">Requirements</h2>
-          <div class="settings-actions">
-            <button type="button" id="refreshRequirementsBtn">Refresh</button>
-            <button type="button" id="closeRequirementsBtn">Close</button>
+      <section class="modal-panel modal-narrow" aria-labelledby="requirementsHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="requirementsHeading" class="modal-title">Requirements</h2>
+            <p class="modal-sub">Runtime components needed for mods to load in-game</p>
+          </div>
+          <div class="modal-head-actions">
+            <button type="button" id="refreshRequirementsBtn" class="btn btn-small btn-secondary">Refresh</button>
+            <button type="button" id="closeRequirementsBtn" class="btn btn-small btn-ghost">✕ Close</button>
           </div>
         </div>
         <ul id="requirementsList" class="requirements-list" aria-label="Requirements"></ul>
       </section>
     </div>
+
+    <!-- ══ Conflicts modal ═══════════════════════════════════════ -->
+    <div id="conflictsModal" class="modal-overlay" hidden>
+      <section class="modal-panel" aria-labelledby="conflictsHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="conflictsHeading" class="modal-title">Overlapping files</h2>
+            <p id="conflictsSub" class="modal-sub">Enabled mods writing to the same path or row</p>
+          </div>
+          <div class="modal-head-actions">
+            <button type="button" id="conflictsShowAllBtn" class="btn btn-small btn-secondary" hidden>Show all</button>
+            <button type="button" id="closeConflictsBtn" class="btn btn-small btn-ghost">✕ Close</button>
+          </div>
+        </div>
+        <p class="conflicts-note">Only <strong>enabled</strong> mods are checked. When mods overlap, the <strong>higher priority</strong> mod wins — the winner is marked below. Raise a mod's <code>priority</code> in its <code>manifest.json</code> to make it win.</p>
+        <ul id="conflictsList" class="conflicts-list" aria-label="Overlapping files"></ul>
+      </section>
+    </div>
+
+    <div id="toastRoot" class="toast-root" aria-live="polite" aria-atomic="false"></div>
 
     <script src="./renderer.js"></script>
   </body>

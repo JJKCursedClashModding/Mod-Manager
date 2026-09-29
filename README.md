@@ -1,6 +1,10 @@
 # JJK CC Mod Manager
 
+[![Beta release](https://github.com/JJKCursedClashModding/Mod-Manager/actions/workflows/beta-release.yml/badge.svg)](https://github.com/JJKCursedClashModding/Mod-Manager/releases/tag/beta)
+
 Electron desktop app for managing and installing mods for **Jujutsu Kaisen Cursed Clash**.
+
+> Prefer a download over source? Grab the latest automated build from the [**beta** release](https://github.com/JJKCursedClashModding/Mod-Manager/releases/tag/beta) (installer + portable exe, rebuilt on every push to `main`; filenames carry the UTC build date and commit).
 
 It scans your mod folders, lets you enable/disable mods, checks required runtime components, and builds a merged mod package for `Content/Paks/~mods`.
 
@@ -14,7 +18,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
 2. On first launch, select `Jujutsu Kaisen CC.exe`.
 3. Put your mods in the detected `Content/Mods` folder (or set an override in Settings).
 4. Enable the mods you want in the list.
-5. Click **Install Mods** to deploy to `Content/Paks/~mods`.
+5. Click **Install enabled mods** to install them into `Content/Paks/~mods`.
 6. Click **Play** to launch the game.
 
 ## Features
@@ -35,8 +39,17 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
   - builds registry `.pak` via `repak`
   - deploys output to game `Content/Paks/~mods`
 - Supports packaging a single mod folder into a zip file.
+- `.jjkmod` mod files: renamed zips containing a mod folder with `manifest.json`. Double-click one (or use **Add mod**) to install it into your library.
 - Built-in requirements checker with optional install/download actions.
 - Launch game directly from the app.
+
+### `.jjkmod` files
+
+A `.jjkmod` file is just a zip with a `.jjkmod` extension. It must contain either a single top-level mod folder or a root-level `manifest.json`. Installing from one follows the same rules as zip installs (newer `manifest.json` versions replace older ones, otherwise the install is skipped as up to date).
+
+The Windows installer associates `.jjkmod` with the app, so double-clicking a `.jjkmod` file installs it (the app opens/focuses and reports the result). The **Add mod** picker accepts both `.jjkmod` and `.zip`.
+
+> Note: file association is registered by the installer build (`npm run build`). Portable builds do not register associations — use **Add mod** there.
 
 ## Requirements
 
@@ -83,7 +96,7 @@ npm run build:portable
 Each mod should be a folder under your mods workspace (normally `.../Content/Mods/<ModId>`).  
 A mod can contain any of the following:
 
-- `manifest.json` (metadata such as title/description/priority)
+- `manifest.json` (metadata: `title`, `description`, `version`, `priority`, `icon` — see below)
 - `AssetRegistry.json` (array of asset registry entries)
 - `assets/` (loose files mirroring game-relative content structure)
 - `datatables/*.json` (merged by filename, then applied to cooked DataTables)
@@ -93,11 +106,43 @@ A mod can contain any of the following:
   - `*.utoc`
   - `*.ucas`
 
+### manifest.json
+
+```json
+{
+  "title": "My Cool Mod",
+  "description": "What this mod does.",
+  "version": "1.2.0",
+  "priority": 10,
+  "icon": "icon.png"
+}
+```
+
+- `priority` (number, default `0`): higher wins when enabled mods overlap. Ties break alphabetically.
+- `icon` (optional): image file **relative to the mod folder** (e.g. `"icon.png"`).
+  Supported types: `.png` `.jpg` `.jpeg` `.webp` `.gif` `.bmp` `.svg` `.ico`, max 512 KB.
+  Paths must stay inside the mod folder (`../` escapes are ignored). Mods without an icon get a letter tile.
+
+### Overlaps
+
+The toolbar shows a `⚠ N overlaps` button whenever **enabled** mods write to the same place:
+
+- same datatable row key (`datatables/<Table>.json` → same top-level key),
+- same `assets/` or `pak_assets/` relative path,
+- same `AssetRegistry.json` `objectName`,
+- same prebuilt package file name in the mod root.
+
+Click it (or a mod's `⚠ N overlaps` badge) to see each overlap and which mod wins.
+The check reads only file paths and datatable row *keys* (never full asset bytes),
+scans each mod once, and caches results — toggling mods recomputes instantly with no disk I/O.
+Only enabled mods are checked; disabled mods never reach the packaging pipeline.
+
 Example:
 
 ```text
 MyCoolMod/
   manifest.json
+  icon.png
   AssetRegistry.json
   assets/
     Jujutsu Kaisen CC/
@@ -118,7 +163,7 @@ MyCoolMod/
 
 ## Packaging Behavior
 
-When you click **Install Mods**, the app:
+When you click **Install enabled mods**, the app:
 
 1. Resolves enabled mods and applies mod priority (low to high, high priority wins on conflicts).
 2. Clears the game `Content/Paks/~mods` folder for a clean deployment.
