@@ -42,18 +42,19 @@ jobs:
       - name: Disable Defender realtime monitoring
         run: Set-MpPreference -DisableRealtimeMonitoring $true
 
-      # postinstall also installs the AssetRegistryPatcher /
-      # CookedDatatablePatcher dependencies. Retried because Windows file
-      # locking (AV/indexer) can still transiently fail npm cleanup.
-      - name: Install dependencies
-        run: |
-          for ($i = 1; $i -le 3; $i++) {
-            npm ci --no-audit --no-fund
-            if ($LASTEXITCODE -eq 0) { break }
-            Write-Host "npm ci failed (attempt $i of 3), retrying in 10s…"
-            Start-Sleep -Seconds 10
-          }
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+      # Each project installs separately (instead of via root postinstall) so
+      # a failure lands in its own step with full, unwrapped logs. The
+      # patchers' `prepare` scripts compile their dist/ output, which is why
+      # they must install with scripts enabled. Re-run failed jobs from the
+      # Actions UI if a step trips on transient Windows file locking.
+      - name: Install dependencies (root)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install dependencies (AssetRegistryPatcher)
+        run: npm ci --prefix ./AssetRegistryPatcher --no-audit --no-fund
+
+      - name: Install dependencies (CookedDatatablePatcher)
+        run: npm ci --prefix ./CookedDatatablePatcher --no-audit --no-fund
 
       # `prebuild` compiles both patchers before electron-builder runs.
       - name: Build installer (NSIS)
