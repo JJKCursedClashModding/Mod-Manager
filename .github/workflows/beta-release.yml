@@ -35,10 +35,25 @@ jobs:
             AssetRegistryPatcher/package-lock.json
             CookedDatatablePatcher/package-lock.json
 
+      # windows-latest runners' Defender realtime scanning locks freshly
+      # written files, making npm's cleanup randomly fail with EPERM rmdir
+      # (typically on file-heavy packages like @types/node in the patchers).
+      # The runner VM is discarded after the build, so disabling it here is safe.
+      - name: Disable Defender realtime monitoring
+        run: Set-MpPreference -DisableRealtimeMonitoring $true
+
       # postinstall also installs the AssetRegistryPatcher /
-      # CookedDatatablePatcher dependencies.
+      # CookedDatatablePatcher dependencies. Retried because Windows file
+      # locking (AV/indexer) can still transiently fail npm cleanup.
       - name: Install dependencies
-        run: npm ci
+        run: |
+          for ($i = 1; $i -le 3; $i++) {
+            npm ci --no-audit --no-fund
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "npm ci failed (attempt $i of 3), retrying in 10s…"
+            Start-Sleep -Seconds 10
+          }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       # `prebuild` compiles both patchers before electron-builder runs.
       - name: Build installer (NSIS)
