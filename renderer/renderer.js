@@ -304,6 +304,7 @@ const CHIP_DEFS = [
   { key: "packages", label: "Packages", title: "Contains a matching .pak + .utoc + .ucas set in the mod root" },
   { key: "assets", label: "Assets", title: "Contains an assets/ folder with loose files" },
   { key: "datatables", label: "Datatables", title: "Contains datatables/*.json patches" },
+  { key: "parameters", label: "Parameters", title: "Contains parameters/*.json patches" },
   { key: "pakAssets", label: "PAK assets", title: "Contains a pak_assets/ folder" },
 ];
 
@@ -788,6 +789,7 @@ function renderConflictsList() {
 function conflictTypeHint(type) {
   switch (type) {
     case "datatable": return "Same datatable row key in 2+ mods — higher priority value wins";
+    case "parameter": return "Same parameters/ row key in 2+ mods — higher priority value wins";
     case "asset": return "Same assets/ path in 2+ mods — higher priority file overwrites";
     case "pakAsset": return "Same pak_assets/ path in 2+ mods — higher priority file overwrites";
     case "registry": return "Same AssetRegistry objectName in 2+ mods — higher priority entry wins";

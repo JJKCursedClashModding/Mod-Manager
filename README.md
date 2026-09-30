@@ -100,6 +100,7 @@ A mod can contain any of the following:
 - `AssetRegistry.json` (array of asset registry entries)
 - `assets/` (loose files mirroring game-relative content structure)
 - `datatables/*.json` (merged by filename, then applied to cooked DataTables)
+- `parameters/*.json` (merged by filename, then applied to cooked Blueprint parameter assets — see below)
 - `pak_assets/` (files added into the generated registry pak)
 - prebuilt package files in mod root:
   - `*.pak`
@@ -128,6 +129,7 @@ A mod can contain any of the following:
 The toolbar shows a `⚠ N overlaps` button whenever **enabled** mods write to the same place:
 
 - same datatable row key (`datatables/<Table>.json` → same top-level key),
+- same parameter row key (`parameters/<name>.json` → same top-level key),
 - same `assets/` or `pak_assets/` relative path,
 - same `AssetRegistry.json` `objectName`,
 - same prebuilt package file name in the mod root.
@@ -152,6 +154,8 @@ MyCoolMod/
             SomeAsset.uasset
   datatables/
     AttackSetDataTable.json
+  parameters/
+    character.json
   pak_assets/
     Jujutsu Kaisen CC/
       Config/
@@ -160,6 +164,56 @@ MyCoolMod/
   MyCoolMod_P.utoc
   MyCoolMod_P.ucas
 ```
+
+### parameters/*.json (new-character Blueprint rows)
+
+Character mods register their characters as **data rows with literal values**
+instead of shipping whole patched Blueprint assets (which would clobber each
+other). Each file is a datatables-style row dump mapping a **new ID** to its
+**complete row value** — no donors, no cloning. `$`-prefixed keys (e.g.
+`$comment`) are author annotations and are ignored everywhere.
+
+```json
+// parameters/character.json
+{ "CP_300": { "CommonMinimumDistanceOffset": { "X": 0, "Y": 0, "Z": -32 } } }
+// parameters/sceneCapture.json
+{ "CP_300": "/Game/Widgets/Commons/Parameters/GameWidgetCharacterSceneCapture_CP_010_BP" }
+```
+
+- `parameters/` holds one JSON per editable asset (short names):
+  - `sceneCapture.json` → `GameWidgetSceneCaptureParameter_BP` (3D preview;
+    keys are character IDs; values name the capture asset to reference — a
+    short ID like `"CP_010"` or a full package path. The target must already
+    be imported; all 48 vanilla capture assets are. Its Transform decides the
+    preview framing; new per-character capture assets are not supported.)
+  - `character.json` → `GameWidgetCharacterParameter_BP` (model-viewer
+    framing; keys are character IDs; values are literal
+    `GameWidgetCharaModelViewerParameter` structs, sparse OK)
+  - `storyDemo.json` → `GameWidgetStoryDemoParameter_BP` (story-demo framing;
+    keys are character IDs; literal `GameStoryDemoCharacterParameter` structs)
+  - `exchangeImage.json` → `GameWidgetExchangeImageParameter_BP` (per-costume
+    UI image offsets; keys are costume IDs like `CP_300_00`). Values are
+    `{ "Offset": {X,Y}, "entries"?: {...} }`: without `entries` the row
+    goes to all 19 image-type entries, with an `entries` map
+    (`{ "<Entry>": {X,Y} }`, `E…::` prefix optional) it goes to exactly those
+    entries with per-entry offsets.
+  - `dynamicIcon.json` → `GameWidgetDynamicIconParameter_BP` (input-guide
+    icon fallbacks; keys are costume IDs; literal
+    `GameWidgetFallbackInputGuideParameter` structs)
+- Unknown struct fields and unknown image entries are build errors that list
+  the valid names. A key that already exists in the base asset is a build
+  error (new characters must use new IDs); the same new key in several mods
+  resolves by priority with a visible warning.
+- Merged rows are written into pristine bases (`data/parameters/`, verified
+  by SHA-256 in `base-manifest.json` — a mismatch stops the build with a
+  re-extract hint) and staged at
+  `Jujutsu Kaisen CC/Content/Widgets/Commons/`. Nothing is emitted when no
+  enabled mod contributes rows.
+- Do **not** ship these 5 assets whole under `assets/` anymore — the merged
+  output overwrites them and the build logs a warning telling you to migrate
+  the rows to `parameters/`.
+- Full working example: the Urame mod's `parameters/` folder (all 5 files
+  with literal values for CP_300 + 30 costumes).
 
 ## Packaging Behavior
 
@@ -172,6 +226,7 @@ When you click **Install enabled mods**, the app:
 5. Builds merged `AssetRegistry.bin`.
 6. Stages loose assets from enabled mods.
 7. Patches cooked tables from `data/datatables` into staging (after assets, so JSON patches win over any cooked DataTables shipped in `assets/`).
+8. Combines `parameters/*.json` into a temp patch set, then patches the pristine cooked Blueprint parameter assets from `data/parameters` into staging (after assets, so merged rows win over any whole parameter asset shipped in `assets/` — which also logs a migration warning).
 8. Produces:
    - `build/output/zModLoader_P.pak`
    - `build/output/zModLoader_P.utoc`
@@ -194,7 +249,7 @@ When you click **Install enabled mods**, the app:
 - `renderer/` - UI markup, styles, frontend logic
 - `AssetRegistryPatcher/` - registry patcher project
 - `CookedDatatablePatcher/` - cooked DataTable patcher project
-- `data/` - baseline data (including `DefaultGame.ini` and cooked datatables)
+- `data/` - baseline data (including `DefaultGame.ini`, cooked datatables, and cooked Blueprint parameter bases + `base-manifest.json`)
 - `tools/` - external tool binaries/resources used by packaging
 
 ## Notes
