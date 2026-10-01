@@ -38,7 +38,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
   - builds IoStore files (`.utoc/.ucas`) via `retoc`
   - builds registry `.pak` via `repak`
   - deploys output to game `Content/Paks/~mods`
-- Supports packaging a single mod folder into a zip file.
+- Supports packaging a single mod folder into a `.jjkmod` file.
 - `.jjkmod` mod files: renamed zips containing a mod folder with `manifest.json`. Double-click one (or use **Add mod**) to install it into your library.
 - Built-in requirements checker with optional install/download actions.
 - Launch game directly from the app.

@@ -616,21 +616,44 @@ function buildToolsMenu(mod) {
     }
   });
 
-  addItem("Package mod (zip)", "📦", async (item) => {
+  addItem("Create manifest.json", "📝", async (item) => {
+    item.disabled = true;
+    try {
+      const result = await window.modManagerApi.createModManifest(mod.fullPath);
+      if (result && result.created) {
+        toastSuccess("manifest.json created", result.manifestPath);
+        try {
+          const state = await window.modManagerApi.refreshMods();
+          applyState(state);
+        } catch {
+          // Refresh failure is non-fatal — the file was still created.
+        }
+      } else {
+        toastInfo("manifest.json already exists", (result && result.manifestPath) || mod.fullPath);
+      }
+    } catch (error) {
+      toastError("Could not create manifest.json", error.message);
+    } finally {
+      item.disabled = false;
+    }
+  });
+
+  addItem("Package mod (jjkmod)", "📦", async (item) => {
     item.disabled = true;
     packageModalCanClose = false;
     if (closePackageModalBtn) closePackageModalBtn.disabled = true;
     if (packageConsoleEl) packageConsoleEl.textContent = "";
     setPackageModalTitle(`Package — ${mod.title}`);
-    setPackageProgress(4, "Zipping mod");
-    appendPackageLog(`[info] Packaging ${mod.title} as zip…`);
+    setPackageProgress(4, "Building jjkmod");
+    appendPackageLog(`[info] Packaging ${mod.title} as jjkmod…`);
     setPackageModalOpen(true);
     try {
-      setPackageProgress(50, "Zipping mod");
+      setPackageProgress(50, "Building jjkmod");
       const result = await window.modManagerApi.packageSingleMod(mod.fullPath);
+      const outputPath = result.jjkmodPath || result.zipPath;
       setPackageProgress(100, "Done");
-      appendPackageLog(`[done] Output: ${result.zipPath}`);
-      toastSuccess("Mod packaged", result.zipPath);
+      appendPackageLog(`[done] Output: ${outputPath}`);
+      toastSuccess("Mod packaged", outputPath);
     } catch (error) {
       appendPackageLog(`[error] ${error.message}`);
       toastError("Packaging failed", error.message);

@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   openExternalUrl: (url) => ipcRenderer.invoke("open-external-url", url),
   openModFolder: (modFolderPath) => ipcRenderer.invoke("open-mod-folder", modFolderPath),
   packageSingleMod: (modFolderPath) => ipcRenderer.invoke("package-single-mod", modFolderPath),
+  createModManifest: (modFolderPath) => ipcRenderer.invoke("create-mod-manifest", modFolderPath),
   setVerboseOutput: (verbose) => ipcRenderer.invoke("set-verbose-output", verbose),
   launchGame: () => ipcRenderer.invoke("launch-game"),
   checkRequirements: () => ipcRenderer.invoke("check-requirements"),
