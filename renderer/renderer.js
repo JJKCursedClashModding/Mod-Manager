@@ -1331,13 +1331,31 @@ async function installModFile(explicitPath) {
     // OS file association (.jjkmod double-click): confirm before unzipping.
     if (explicitPath) {
       let displayName = basenameOfPath(explicitPath);
-      let detail = explicitPath;
+      let detail = "";
       try {
         const preview = await window.modManagerApi.previewModFile?.(explicitPath);
         if (preview) {
           displayName = preview.displayName || preview.title || preview.modFolderName || displayName;
-          const ver = preview.version ? ` v${preview.version}` : "";
-          detail = `${preview.fileName || displayName}${ver}\n${explicitPath}`;
+          const lines = [];
+          if (preview.version) lines.push(`v${preview.version}`);
+          if (preview.exists) {
+            if (preview.status === "same") {
+              lines.push(`Already installed${preview.existingVersion ? ` (v${preview.existingVersion})` : ""} — already up to date`);
+            } else if (preview.status === "update") {
+              lines.push(
+                preview.existingVersion
+                  ? `Installed v${preview.existingVersion} → will update to v${preview.version || "?"}`
+                  : "Already installed — will be replaced",
+              );
+            } else if (preview.status === "older") {
+              lines.push(
+                preview.existingVersion
+                  ? `Installed v${preview.existingVersion} is newer — existing will be kept`
+                  : "Already installed — existing will be kept",
+              );
+            }
+          }
+          detail = lines.join("\n");
         }
       } catch (previewErr) {
         toastError("Could not open mod file", previewErr?.message || String(previewErr));
