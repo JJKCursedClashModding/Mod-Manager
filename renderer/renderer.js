@@ -568,6 +568,7 @@ function buildToolsMenu(mod) {
     toolsMenu.hidden = false;
     toolsBtn.setAttribute("aria-expanded", "true");
     activeModToolsClose = closeToolsMenu;
+    fitToolsMenu(toolsWrap, toolsMenu);
   }
 
   toolsBtn.addEventListener("click", (e) => {
@@ -676,6 +677,26 @@ function buildToolsMenu(mod) {
 
   toolsWrap.append(toolsBtn, toolsMenu);
   return toolsWrap;
+}
+
+/**
+ * Flips a footer Tools menu below its trigger when there isn't enough room
+ * above it (e.g. the topmost mod card, where the scroll container would
+ * otherwise clip the upward-opening menu). Runs on every open so scrolling
+ * or resizing is always accounted for.
+ */
+function fitToolsMenu(toolsWrap, toolsMenu) {
+  toolsMenu.classList.remove("mod-tools-menu--below");
+  const scroller = modListEl?.closest(".app") ?? document.documentElement;
+  const view = scroller.getBoundingClientRect();
+  const menuH = toolsMenu.getBoundingClientRect().height;
+  const trig = toolsWrap.getBoundingClientRect();
+  const roomAbove = trig.top - view.top;
+  const roomBelow = view.bottom - trig.bottom;
+  // Default direction is above; flip below only when above clips and below is roomier.
+  if (roomAbove < menuH + 6 && roomBelow > roomAbove) {
+    toolsMenu.classList.add("mod-tools-menu--below");
+  }
 }
 
 /* ── Overlap (conflicts) UI ───────────────────────────────── */
