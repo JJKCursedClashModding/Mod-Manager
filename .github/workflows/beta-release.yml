@@ -1,6 +1,6 @@
 name: Beta release
 
-# Builds the Windows exes (installer + portable) and publishes them to a
+# Builds the Windows installer (NSIS setup) and publishes it to a
 # floating `beta` prerelease tag. Runs the build on PRs too, but only
 # publishes on pushes to main or manual dispatch.
 on:
@@ -60,16 +60,13 @@ jobs:
       - name: Build installer (NSIS)
         run: npm run build -- --publish never
 
-      - name: Build portable exe
-        run: npm run build:portable -- --publish never
-
       - name: List artifacts
         run: Get-ChildItem dist/*.exe
 
       # Rename exes so each beta is identifiable: the version stays frozen
       # (see README), so the UTC date + commit go into the filename instead.
-      # Renaming is safe: neither the NSIS installer nor the portable exe
-      # depends on its own filename (no latest.yml/blockmap is published).
+      # Renaming is safe: the NSIS installer does not depend on its own
+      # filename (no latest.yml/blockmap is published).
       - name: Stamp beta filenames with date
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
