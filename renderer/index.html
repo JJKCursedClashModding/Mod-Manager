@@ -224,6 +224,23 @@
       </section>
     </div>
 
+    <!-- ══ Install confirm modal (.jjkmod file association) ════════ -->
+    <div id="installConfirmModal" class="modal-overlay" hidden>
+      <section class="modal-panel modal-narrow" aria-labelledby="installConfirmHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="installConfirmHeading" class="modal-title">Install mod?</h2>
+            <p id="installConfirmText" class="modal-sub">Do you want to install this mod?</p>
+          </div>
+        </div>
+        <p id="installConfirmDetail" class="path-line" style="white-space: pre-line;" hidden></p>
+        <div class="setting-row" style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" id="installConfirmCancelBtn" class="btn btn-small btn-ghost">Cancel</button>
+          <button type="button" id="installConfirmOkBtn" class="btn btn-small btn-primary">Install</button>
+        </div>
+      </section>
+    </div>
+
     <div id="toastRoot" class="toast-root" aria-live="polite" aria-atomic="false"></div>
 
     <script src="./renderer.js"></script>

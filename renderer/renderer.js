@@ -56,6 +56,11 @@ const conflictsListEl = $("conflictsList");
 const conflictsSubEl = $("conflictsSub");
 const conflictsShowAllBtn = $("conflictsShowAllBtn");
 const closeConflictsBtn = $("closeConflictsBtn");
+const installConfirmModalEl = $("installConfirmModal");
+const installConfirmTextEl = $("installConfirmText");
+const installConfirmDetailEl = $("installConfirmDetail");
+const installConfirmOkBtn = $("installConfirmOkBtn");
+const installConfirmCancelBtn = $("installConfirmCancelBtn");
 
 let currentModsFolder = null;
 let lastModsState = null;
@@ -169,6 +174,58 @@ function appendPackageLog(line) {
 
 function setRequirementsModalOpen(open) {
   if (requirementsModalEl) requirementsModalEl.hidden = !open;
+}
+
+/* ── Install confirmation (.jjkmod file association) ─────── */
+let pendingInstallResolver = null;
+
+function basenameOfPath(p) {
+  if (!p || typeof p !== "string") return "this mod";
+  const parts = p.split(/[/\\]/);
+  return parts.pop() || p;
+}
+
+function setInstallConfirmOpen(open) {
+  if (installConfirmModalEl) installConfirmModalEl.hidden = !open;
+}
+
+/**
+ * Asks "Do you want to install NAME?" — resolves true on Install.
+ * Falls back to window.confirm when the styled modal is unavailable.
+ */
+function confirmInstallMod(displayName, detail) {
+  const name = displayName || "this mod";
+  if (!installConfirmModalEl || !installConfirmOkBtn || !installConfirmCancelBtn) {
+    return Promise.resolve(window.confirm(`Do you want to install ${name}?`));
+  }
+  if (pendingInstallResolver) {
+    pendingInstallResolver(false);
+    pendingInstallResolver = null;
+  }
+  if (installConfirmTextEl) installConfirmTextEl.textContent = `Do you want to install ${name}?`;
+  if (installConfirmDetailEl) {
+    if (detail) {
+      installConfirmDetailEl.textContent = detail;
+      installConfirmDetailEl.hidden = false;
+    } else {
+      installConfirmDetailEl.textContent = "";
+      installConfirmDetailEl.hidden = true;
+    }
+  }
+  setInstallConfirmOpen(true);
+  installConfirmOkBtn.focus?.();
+  return new Promise((resolve) => {
+    pendingInstallResolver = resolve;
+  });
+}
+
+function resolvePendingInstall(result) {
+  if (pendingInstallResolver) {
+    const r = pendingInstallResolver;
+    pendingInstallResolver = null;
+    setInstallConfirmOpen(false);
+    r(result);
+  }
 }
 
 /* ── Skeletons / empty states ───────────────────────────── */
@@ -1146,15 +1203,17 @@ async function init() {
       toastInfo("Welcome", "Select your game executable to link the mod library.");
       lastModsState = result;
       appReady = true;
+      pullInitialModFiles();
       return;
     }
     applyState(result);
     appReady = true;
-    processPendingOpenFiles();
+    pullInitialModFiles();
   } catch (err) {
     renderEmptyState();
     toastError("Failed to initialise", err?.message || String(err));
     appReady = true;
+    pullInitialModFiles();
   }
 }
 
@@ -1269,6 +1328,24 @@ async function installModFile(explicitPath) {
   addModBusy = true;
   installModBtn.disabled = true;
   try {
+    // OS file association (.jjkmod double-click): confirm before unzipping.
+    if (explicitPath) {
+      let displayName = basenameOfPath(explicitPath);
+      let detail = explicitPath;
+      try {
+        const preview = await window.modManagerApi.previewModFile?.(explicitPath);
+        if (preview) {
+          displayName = preview.displayName || preview.title || preview.modFolderName || displayName;
+          const ver = preview.version ? ` v${preview.version}` : "";
+          detail = `${preview.fileName || displayName}${ver}\n${explicitPath}`;
+        }
+      } catch (previewErr) {
+        toastError("Could not open mod file", previewErr?.message || String(previewErr));
+        return;
+      }
+      const ok = await confirmInstallMod(displayName, detail);
+      if (!ok) return;
+    }
     const result = explicitPath
       ? await window.modManagerApi.installModFromFile(explicitPath)
       : await window.modManagerApi.installModFromZip();
@@ -1297,10 +1374,30 @@ async function installModFile(explicitPath) {
 
 installModBtn?.addEventListener("click", () => installModFile(null));
 
+installConfirmOkBtn?.addEventListener("click", () => resolvePendingInstall(true));
+installConfirmCancelBtn?.addEventListener("click", () => resolvePendingInstall(false));
+installConfirmModalEl?.addEventListener("click", (e) => {
+  if (e.target === installConfirmModalEl) resolvePendingInstall(false);
+});
+
 window.modManagerApi.onOpenModFile?.((files) => {
   for (const f of files || []) pendingOpenFiles.push(f);
   processPendingOpenFiles();
 });
+
+// Cold-start files (double-clicked to launch the app) arrive via the
+// `renderer-ready` handshake — the listener above must exist first.
+async function pullInitialModFiles() {
+  try {
+    const files = await window.modManagerApi.notifyRendererReady?.();
+    if (Array.isArray(files)) {
+      for (const f of files) pendingOpenFiles.push(f);
+    }
+  } catch {
+    /* main too old or handshake failed — live `open-mod-file` still works */
+  }
+  processPendingOpenFiles();
+}
 
 changePathBtn?.addEventListener("click", async () => {
   const result = await window.modManagerApi.changeGameLocation();
@@ -1463,7 +1560,8 @@ modSortSelect?.addEventListener("change", () => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    if (conflictsModalEl && !conflictsModalEl.hidden) setConflictsModalOpen(false);
+    if (installConfirmModalEl && !installConfirmModalEl.hidden) resolvePendingInstall(false);
+    else if (conflictsModalEl && !conflictsModalEl.hidden) setConflictsModalOpen(false);
     else if (requirementsModalEl && !requirementsModalEl.hidden) setRequirementsModalOpen(false);
     else if (packageModalEl && !packageModalEl.hidden && packageModalCanClose) setPackageModalOpen(false);
     else if (settingsModalEl && !settingsModalEl.hidden) setSettingsOpen(false);

@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   packageAllMods: (modsFolder) => ipcRenderer.invoke("package-all-mods", modsFolder),
   installModFromZip: () => ipcRenderer.invoke("install-mod-from-zip"),
   installModFromFile: (filePath) => ipcRenderer.invoke("install-mod-from-file", filePath),
+  previewModFile: (filePath) => ipcRenderer.invoke("preview-mod-file", filePath),
+  notifyRendererReady: () => ipcRenderer.invoke("renderer-ready"),
   onOpenModFile: (callback) => {
     const handler = (_, files) => callback(files);
     ipcRenderer.on("open-mod-file", handler);

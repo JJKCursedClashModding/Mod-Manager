@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain } = require("electron");
 
 app.setName("Jujutsu Kaisen Cursed Clash Mod Manager");
 app.disableHardwareAcceleration();
@@ -9,8 +9,14 @@ const { registerIpcHandlers } = require("./lib/ipcHandlers");
 const MOD_FILE_PATTERN = /\.(jjkmod|zip)$/i;
 
 let mainWin = null;
-/** Mod files opened before the window finished loading. */
+/**
+ * Mod files opened before the renderer was ready to receive them.
+ * Delivered via the `renderer-ready` handshake (cold start) or via
+ * `open-mod-file` for arrivals while the app is already running.
+ */
 const pendingModFiles = [];
+/** Becomes true once the renderer has subscribed to `open-mod-file`. */
+let rendererReady = false;
 
 function collectModFilesFromArgv(argv) {
   return (Array.isArray(argv) ? argv : []).filter(
@@ -19,7 +25,7 @@ function collectModFilesFromArgv(argv) {
 }
 
 function flushPendingModFiles() {
-  if (!mainWin || mainWin.webContents.isLoading() || pendingModFiles.length === 0) {
+  if (!mainWin || mainWin.webContents.isLoading() || !rendererReady || pendingModFiles.length === 0) {
     return;
   }
   const files = pendingModFiles.splice(0, pendingModFiles.length);
@@ -42,6 +48,7 @@ function forwardModFiles(files) {
 }
 
 function createWindow() {
+  rendererReady = false;
   const win = new BrowserWindow({
     title: "Jujutsu Kaisen Cursed Clash Mod Manager",
     width: 1080,
@@ -58,17 +65,37 @@ function createWindow() {
   });
 
   mainWin = win;
-  win.webContents.on("did-finish-load", flushPendingModFiles);
+  // A reload clears renderer listeners — treat it as not-ready until the
+  // fresh page handshakes again, so live arrivals queue instead of loss.
+  win.webContents.on("did-start-loading", () => {
+    rendererReady = false;
+  });
   win.on("closed", () => {
     if (mainWin === win) {
       mainWin = null;
     }
+    rendererReady = false;
   });
 
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
 }
 
 registerIpcHandlers();
+
+// Renderer calls this once `onOpenModFile` is subscribed. Returns any
+// .jjkmod files that arrived before the subscription existed (cold start
+// via double-click), so they are never lost in the did-finish-load race.
+ipcMain.handle("renderer-ready", () => {
+  rendererReady = true;
+  const files = pendingModFiles.splice(0, pendingModFiles.length);
+  if (files.length > 0 && mainWin) {
+    if (mainWin.isMinimized()) {
+      mainWin.restore();
+    }
+    mainWin.focus();
+  }
+  return files;
+});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
