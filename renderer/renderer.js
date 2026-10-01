@@ -639,6 +639,16 @@ function buildToolsMenu(mod) {
   });
 
   addItem("Package mod (jjkmod)", "📦", async (item) => {
+    // Ask where to save first, so cancelling never opens the progress modal.
+    let savePath;
+    try {
+      const pick = await window.modManagerApi.pickSaveJjkmodPath(mod.fullPath);
+      if (!pick || pick.cancelled || !pick.filePath) return;
+      savePath = pick.filePath;
+    } catch (error) {
+      toastError("Packaging failed", error.message);
+      return;
+    }
     item.disabled = true;
     packageModalCanClose = false;
     if (closePackageModalBtn) closePackageModalBtn.disabled = true;
@@ -649,7 +659,7 @@ function buildToolsMenu(mod) {
     setPackageModalOpen(true);
     try {
       setPackageProgress(50, "Building jjkmod");
-      const result = await window.modManagerApi.packageSingleMod(mod.fullPath);
+      const result = await window.modManagerApi.packageSingleMod(mod.fullPath, savePath);
       const outputPath = result.jjkmodPath || result.zipPath;
       setPackageProgress(100, "Done");
       appendPackageLog(`[done] Output: ${outputPath}`);
