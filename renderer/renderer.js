@@ -190,25 +190,58 @@ function setInstallConfirmOpen(open) {
 }
 
 /**
- * Asks "Do you want to install NAME?" — resolves true on Install.
- * Falls back to window.confirm when the styled modal is unavailable.
+ * Asks "Do you want to install TITLE (version)?" plus a
+ * "Currently installed: version" line when already in the library.
+ * Title and version are bold in distinct colors; built with textContent
+ * so manifest strings can't inject HTML. Falls back to window.confirm.
  */
-function confirmInstallMod(displayName, detail) {
-  const name = displayName || "this mod";
+function confirmInstallMod({ title, version, exists, existingVersion, status }) {
+  const name = title || "this mod";
+  const verLabel = version ? `v${version}` : "";
   if (!installConfirmModalEl || !installConfirmOkBtn || !installConfirmCancelBtn) {
-    return Promise.resolve(window.confirm(`Do you want to install ${name}?`));
+    return Promise.resolve(window.confirm(`Do you want to install ${name}${verLabel ? ` (${verLabel})` : ""}?`));
   }
   if (pendingInstallResolver) {
     pendingInstallResolver(false);
     pendingInstallResolver = null;
   }
-  if (installConfirmTextEl) installConfirmTextEl.textContent = `Do you want to install ${name}?`;
+  // Main line: Do you want to install TITLE (version)?
+  if (installConfirmTextEl) {
+    installConfirmTextEl.textContent = "";
+    installConfirmTextEl.append("Do you want to install ");
+    const nameEl = document.createElement("strong");
+    nameEl.className = "install-name";
+    nameEl.textContent = name;
+    installConfirmTextEl.append(nameEl);
+    if (verLabel) {
+      installConfirmTextEl.append(" (");
+      const verEl = document.createElement("strong");
+      verEl.className = "install-ver";
+      verEl.textContent = verLabel;
+      installConfirmTextEl.append(verEl);
+      installConfirmTextEl.append(")");
+    }
+    installConfirmTextEl.append("?");
+  }
+  // Status line: Currently installed: version (+ outcome hint).
   if (installConfirmDetailEl) {
-    if (detail) {
-      installConfirmDetailEl.textContent = detail;
+    installConfirmDetailEl.textContent = "";
+    if (exists) {
+      installConfirmDetailEl.append("Currently installed: ");
+      const curEl = document.createElement("strong");
+      curEl.textContent = existingVersion ? `v${existingVersion}` : "present";
+      installConfirmDetailEl.append(curEl);
+      if (status === "same") {
+        installConfirmDetailEl.append(" — already up to date");
+      } else if (status === "update") {
+        installConfirmDetailEl.append(" — will update");
+      } else if (status === "older") {
+        installConfirmDetailEl.append(" is newer — existing will be kept");
+      } else {
+        installConfirmDetailEl.append(" — will be replaced");
+      }
       installConfirmDetailEl.hidden = false;
     } else {
-      installConfirmDetailEl.textContent = "";
       installConfirmDetailEl.hidden = true;
     }
   }
@@ -1330,38 +1363,23 @@ async function installModFile(explicitPath) {
   try {
     // OS file association (.jjkmod double-click): confirm before unzipping.
     if (explicitPath) {
-      let displayName = basenameOfPath(explicitPath);
-      let detail = "";
+      let promptInfo = { title: basenameOfPath(explicitPath) };
       try {
         const preview = await window.modManagerApi.previewModFile?.(explicitPath);
         if (preview) {
-          displayName = preview.displayName || preview.title || preview.modFolderName || displayName;
-          const lines = [];
-          if (preview.version) lines.push(`v${preview.version}`);
-          if (preview.exists) {
-            if (preview.status === "same") {
-              lines.push(`Already installed${preview.existingVersion ? ` (v${preview.existingVersion})` : ""} — already up to date`);
-            } else if (preview.status === "update") {
-              lines.push(
-                preview.existingVersion
-                  ? `Installed v${preview.existingVersion} → will update to v${preview.version || "?"}`
-                  : "Already installed — will be replaced",
-              );
-            } else if (preview.status === "older") {
-              lines.push(
-                preview.existingVersion
-                  ? `Installed v${preview.existingVersion} is newer — existing will be kept`
-                  : "Already installed — existing will be kept",
-              );
-            }
-          }
-          detail = lines.join("\n");
+          promptInfo = {
+            title: preview.displayName || preview.title || preview.modFolderName || promptInfo.title,
+            version: preview.version || null,
+            exists: Boolean(preview.exists),
+            existingVersion: preview.existingVersion || null,
+            status: preview.status || (preview.exists ? "unknown" : "new"),
+          };
         }
       } catch (previewErr) {
         toastError("Could not open mod file", previewErr?.message || String(previewErr));
         return;
       }
-      const ok = await confirmInstallMod(displayName, detail);
+      const ok = await confirmInstallMod(promptInfo);
       if (!ok) return;
     }
     const result = explicitPath

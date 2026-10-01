@@ -792,6 +792,11 @@ img.brand-logo {
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
 .modal-title { margin: 0; font-size: 16px; font-weight: 750; letter-spacing: 0.01em; }
 .modal-sub { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+.install-confirm-text { font-size: 13px; line-height: 1.5; }
+.install-name { font-weight: 800; color: var(--text); }
+.install-ver { font-weight: 800; color: var(--accent-2); }
+.install-confirm-status { margin-top: 8px; font-size: 12px; }
+.install-confirm-status strong { font-weight: 800; color: var(--accent); }
 .modal-head-actions { display: flex; gap: 7px; flex-shrink: 0; }
 
 /* Settings cards */
