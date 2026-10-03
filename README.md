@@ -4,7 +4,7 @@
 
 Electron desktop app for managing and installing mods for **Jujutsu Kaisen Cursed Clash**.
 
-> Prefer a download over source? Grab the latest automated build from the [**beta** release](https://github.com/JJKCursedClashModding/Mod-Manager/releases/tag/beta) (installer + portable exe, rebuilt on every push to `main`; filenames carry the UTC build date and commit).
+> Prefer a download over source? Grab the latest automated build from the [**beta** release](https://github.com/JJKCursedClashModding/Mod-Manager/releases/tag/beta) (NSIS installer, rebuilt on every push to `main`; filenames carry the UTC build date and commit).
 
 It scans your mod folders, lets you enable/disable mods, checks required runtime components, and builds a merged mod package for `Content/Paks/~mods`.
 
@@ -30,7 +30,11 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
   - prebuilt packages (`.pak/.utoc/.ucas`)
   - `assets/`
   - `datatables/`
+  - `parameters/`
   - `pak_assets/`
+  - `scripts/`
+- Search, filter (All / Enabled / Disabled), and sort (priority / name / enabled-first) the mod library.
+- Overlap detection: warns when enabled mods write to the same path or row (see below).
 - Installs all enabled mods via one pipeline:
   - merges DataTable JSON files and patches cooked DataTables
   - merges AssetRegistry entries
@@ -38,7 +42,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
   - builds IoStore files (`.utoc/.ucas`) via `retoc`
   - builds registry `.pak` via `repak`
   - deploys output to game `Content/Paks/~mods`
-- Supports packaging a single mod folder into a `.jjkmod` file.
+- Supports packaging a single mod folder into a `.jjkmod` file (you pick the save location), and creating a default `manifest.json` from a mod's Tools menu.
 - `.jjkmod` mod files: renamed zips containing a mod folder with `manifest.json`. Double-click one (or use **Add mod**) to install it into your library.
 - Built-in requirements checker with optional install/download actions.
 - Launch game directly from the app.
@@ -47,9 +51,11 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
 
 A `.jjkmod` file is just a zip with a `.jjkmod` extension. It must contain either a single top-level mod folder or a root-level `manifest.json`. Installing from one follows the same rules as zip installs (newer `manifest.json` versions replace older ones, otherwise the install is skipped as up to date).
 
-The Windows installer associates `.jjkmod` with the app, so double-clicking a `.jjkmod` file installs it (the app opens/focuses and reports the result). The **Add mod** picker accepts both `.jjkmod` and `.zip`.
+The Windows installer associates `.jjkmod` with the app, so double-clicking a `.jjkmod` file installs it (the app opens/focuses and asks for confirmation first). The **Add mod** picker accepts both `.jjkmod` and `.zip`.
 
-> Note: file association is registered by the installer build (`npm run build`). Portable builds do not register associations — use **Add mod** there.
+Installing from a file shows a confirmation prompt with the mod title, its version, and any already-installed version status (new install, update, same-version reinstall, or older than installed), plus a reminder to only install mods from sources you trust.
+
+> Note: file association is registered by the installer build (`npm run build`). A portable build (`npm run build:portable`) does not register associations — use **Add mod** there. The automated beta release ships the installer only.
 
 ## Requirements
 
@@ -64,10 +70,11 @@ The app also checks runtime modding dependencies from the Requirements modal, in
 ## Installation (From Source)
 
 ```bash
+git clone --recurse-submodules <repo-url>
 npm install
 ```
 
-`postinstall` also installs dependencies for `AssetRegistryPatcher` and `CookedDatatablePatcher`.
+`postinstall` also installs dependencies for `AssetRegistryPatcher` and `CookedDatatablePatcher` (both are git submodules — on an existing clone run `git submodule update --init --recursive` if those folders are empty).
 
 ## Run
 
@@ -85,11 +92,13 @@ Create Windows installer:
 npm run build
 ```
 
-Create portable Windows build:
+Create portable Windows build (local only, no file association):
 
 ```bash
 npm run build:portable
 ```
+
+The installer lands in `dist/`. Pushing to `main` publishes a fresh installer to the [beta release](https://github.com/JJKCursedClashModding/Mod-Manager/releases/tag/beta) automatically.
 
 ## Mod Folder Structure
 
@@ -102,6 +111,7 @@ A mod can contain any of the following:
 - `datatables/*.json` (merged by filename, then applied to cooked DataTables)
 - `parameters/*.json` (merged by filename, then applied to cooked Blueprint parameter assets — see below)
 - `pak_assets/` (files added into the generated registry pak)
+- `scripts/` (ASI/DLL plugins + sidecars deployed to the game `scripts/` dir next to the exe for Ultimate ASI Loader)
 - prebuilt package files in mod root:
   - `*.pak`
   - `*.utoc`
@@ -130,7 +140,7 @@ The toolbar shows a `⚠ N overlaps` button whenever **enabled** mods write to t
 
 - same datatable row key (`datatables/<Table>.json` → same top-level key),
 - same parameter row key (`parameters/<name>.json` → same top-level key),
-- same `assets/` or `pak_assets/` relative path,
+- same `assets/`, `pak_assets/`, or `scripts/` relative path,
 - same `AssetRegistry.json` `objectName`,
 - same prebuilt package file name in the mod root.
 
@@ -156,6 +166,8 @@ MyCoolMod/
     AttackSetDataTable.json
   parameters/
     character.json
+  scripts/
+    MyPlugin.asi
   pak_assets/
     Jujutsu Kaisen CC/
       Config/
@@ -227,12 +239,12 @@ When you click **Install enabled mods**, the app:
 6. Stages loose assets from enabled mods.
 7. Patches cooked tables from `data/datatables` into staging (after assets, so JSON patches win over any cooked DataTables shipped in `assets/`).
 8. Combines `parameters/*.json` into a temp patch set, then patches the pristine cooked Blueprint parameter assets from `data/parameters` into staging (after assets, so merged rows win over any whole parameter asset shipped in `assets/` — which also logs a migration warning).
-8. Produces:
+9. Produces:
    - `build/output/zModLoader_P.pak`
    - `build/output/zModLoader_P.utoc`
    - `build/output/zModLoader_P.ucas`
-9. Copies generated files (plus any mod prebuilt packages) to:
-   - `Content/Paks/~mods`
+10. Copies generated files (plus any mod prebuilt packages) to:
+    - `Content/Paks/~mods`
 
 ## Project Scripts
 
@@ -255,7 +267,7 @@ When you click **Install enabled mods**, the app:
 ## Notes
 
 - Build outputs and generated mod artifacts are intentionally ignored via `.gitignore` (`build/`, `mods/`, `node_modules/`, `dist/`).
-- This repository currently has active local changes; if you plan to commit this README separately, stage only `README.md`.
+- See [CHANGELOG.md](./CHANGELOG.md) for what changed in each release.
 
 ## Credits
 

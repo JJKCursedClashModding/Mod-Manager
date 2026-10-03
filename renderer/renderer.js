@@ -48,7 +48,11 @@ const statusModsDot = $("statusModsDot");
 const statusGameText = $("statusGameText");
 const statusGameDot = $("statusGameDot");
 const toastRoot = $("toastRoot");
-const filterButtons = Array.from(document.querySelectorAll(".segmented-btn"));
+const filterButtons = Array.from(document.querySelectorAll('[data-filter]'));
+const conflictsTypeFilterEl = $('conflictsTypeFilter');
+const conflictTypeButtons = Array.from(
+  document.querySelectorAll('#conflictsTypeFilter [data-conflict-type]')
+);
 const conflictsBtn = $("conflictsBtn");
 const conflictsCount = $("conflictsCount");
 const conflictsModalEl = $("conflictsModal");
@@ -77,6 +81,7 @@ let sortMode = "priority";
 // Overlap state (enabled mods only, from main process)
 let currentConflicts = { total: 0, truncated: false, conflicts: [], byMod: {}, scannedMods: 0, warnings: [] };
 let conflictFilterModId = null;
+let conflictTypeFilter = 'all';
 
 function emptyConflicts() {
   return { total: 0, truncated: false, conflicts: [], byMod: {}, scannedMods: 0, warnings: [] };
@@ -396,6 +401,7 @@ const CHIP_DEFS = [
   { key: "datatables", label: "Datatables", title: "Contains datatables/*.json patches" },
   { key: "parameters", label: "Parameters", title: "Contains parameters/*.json patches" },
   { key: "pakAssets", label: "PAK assets", title: "Contains a pak_assets/ folder" },
+  { key: "scripts", label: "Scripts", title: "Contains a scripts/ folder (ASI/DLLs loaded by Ultimate ASI Loader)" },
 ];
 
 function avatarHue(id) {
@@ -792,12 +798,27 @@ function fitToolsMenu(toolsWrap, toolsMenu) {
 /* ── Overlap (conflicts) UI ───────────────────────────────── */
 
 const CONFLICT_TYPE_LABELS = {
-  datatable: "Row",
-  asset: "Asset",
-  pakAsset: "PAK",
-  registry: "Registry",
-  prebuilt: "Package",
+  datatable: 'Row',
+  parameter: 'Parameter',
+  asset: 'Asset',
+  pakAsset: 'PAK',
+  scripts: 'Script',
+  registry: 'Registry',
+  prebuilt: 'Package',
 };
+
+// Type tabs in the overlaps modal — same .segmented design as the
+// All / Enabled / Disabled library tabs.
+const CONFLICT_TYPE_FILTER_DEFS = [
+  { value: 'all', label: 'All' },
+  { value: 'datatable', label: 'Rows' },
+  { value: 'parameter', label: 'Parameters' },
+  { value: 'asset', label: 'Assets' },
+  { value: 'pakAsset', label: 'PAK' },
+  { value: 'scripts', label: 'Scripts' },
+  { value: 'registry', label: 'Registry' },
+  { value: 'prebuilt', label: 'Packages' },
+];
 
 function setConflictsModalOpen(open) {
   if (conflictsModalEl) conflictsModalEl.hidden = !open;
@@ -807,7 +828,7 @@ function updateConflictsUI() {
   const total = currentConflicts.total || 0;
   if (conflictsBtn) conflictsBtn.hidden = total === 0;
   if (conflictsCount) {
-    conflictsCount.textContent = `${total} overlap${total === 1 ? "" : "s"}${currentConflicts.truncated ? "+" : ""}`;
+    conflictsCount.textContent = `${total} overlap${total === 1 ? '' : 's'}`;
   }
   if (conflictsBtn) {
     conflictsBtn.title = total
@@ -855,37 +876,90 @@ function updateConflictBadges() {
 
 function openConflictsModal(filterModId = null) {
   conflictFilterModId = filterModId;
+  // Always start on All so every overlap (including assets) is visible;
+  // the user can then narrow by type.
+  conflictTypeFilter = 'all';
   renderConflictsList();
   setConflictsModalOpen(true);
 }
 
+/** Overlaps after the per-mod filter, before the type filter (for tab counts). */
+function getModFilteredConflicts() {
+  const all = currentConflicts.conflicts || [];
+  if (!conflictFilterModId) return all;
+  return all.filter((c) => (c.mods || []).some((m) => m.id === conflictFilterModId));
+}
+
+function setConflictTypeFilter(value) {
+  conflictTypeFilter = value || 'all';
+  for (const b of conflictTypeButtons) {
+    const on = (b.dataset.conflictType || 'all') === conflictTypeFilter;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  }
+  renderConflictsList();
+}
+
+/** Refreshes type-tab labels with live counts from the mod-filtered set. */
+function updateConflictTypeTabs(modFiltered) {
+  const counts = { all: modFiltered.length };
+  for (const c of modFiltered) {
+    counts[c.type] = (counts[c.type] || 0) + 1;
+  }
+  for (const b of conflictTypeButtons) {
+    const value = b.dataset.conflictType || 'all';
+    const def = CONFLICT_TYPE_FILTER_DEFS.find((d) => d.value === value);
+    const n = counts[value] || 0;
+    b.textContent = value === 'all' ? `All (${n})` : `${def ? def.label : value} (${n})`;
+    b.disabled = n === 0 && value !== 'all' && value !== conflictTypeFilter;
+    const on = value === conflictTypeFilter;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  }
+  if (conflictsTypeFilterEl) conflictsTypeFilterEl.hidden = modFiltered.length === 0;
+}
+
 function renderConflictsList() {
   if (!conflictsListEl) return;
-  conflictsListEl.innerHTML = "";
+  conflictsListEl.innerHTML = '';
 
-  const all = currentConflicts.conflicts || [];
-  const list = conflictFilterModId
-    ? all.filter((c) => (c.mods || []).some((m) => m.id === conflictFilterModId))
-    : all;
+  const modFiltered = getModFilteredConflicts();
+  updateConflictTypeTabs(modFiltered);
+  const list =
+    conflictTypeFilter && conflictTypeFilter !== 'all'
+      ? modFiltered.filter((c) => c.type === conflictTypeFilter)
+      : modFiltered;
 
   if (conflictsShowAllBtn) conflictsShowAllBtn.hidden = !conflictFilterModId;
   if (conflictsSubEl) {
+    const typeDef = CONFLICT_TYPE_FILTER_DEFS.find((d) => d.value === conflictTypeFilter);
+    const typeSuffix =
+      conflictTypeFilter && conflictTypeFilter !== 'all'
+        ? ` — ${typeDef ? typeDef.label : conflictTypeFilter} (${list.length})`
+        : '';
     if (conflictFilterModId) {
       const mod = allMods.find((m) => m.id === conflictFilterModId);
-      conflictsSubEl.textContent = `Overlaps involving “${mod ? mod.title : conflictFilterModId}” (${list.length})`;
+      conflictsSubEl.textContent = `Overlaps involving “${mod ? mod.title : conflictFilterModId}” (${modFiltered.length})${typeSuffix}`;
     } else {
       conflictsSubEl.textContent = currentConflicts.total
-        ? `${currentConflicts.total} overlapping file${currentConflicts.total === 1 ? "" : "s"} across ${currentConflicts.scannedMods} enabled mod${currentConflicts.scannedMods === 1 ? "" : "s"}${currentConflicts.truncated ? " (showing first 400)" : ""}`
-        : "Enabled mods writing to the same path or row";
+        ? `${currentConflicts.total} overlapping file${currentConflicts.total === 1 ? '' : 's'} across ${currentConflicts.scannedMods} enabled mod${currentConflicts.scannedMods === 1 ? '' : 's'}${typeSuffix}`
+        : 'Enabled mods writing to the same path or row';
     }
   }
 
   if (!list.length) {
-    const li = document.createElement("li");
-    li.className = "conflicts-empty";
-    li.textContent = conflictFilterModId
-      ? "No overlaps involve this mod."
-      : "No overlaps — enabled mods touch distinct files and rows. ✓";
+    const li = document.createElement('li');
+    li.className = 'conflicts-empty';
+    if (conflictTypeFilter && conflictTypeFilter !== 'all') {
+      const typeDef = CONFLICT_TYPE_FILTER_DEFS.find((d) => d.value === conflictTypeFilter);
+      li.textContent = conflictFilterModId
+        ? `No ${typeDef ? typeDef.label.toLowerCase() : conflictTypeFilter} overlaps involve this mod.`
+        : `No ${typeDef ? typeDef.label.toLowerCase() : conflictTypeFilter} overlaps — try another type.`;
+    } else {
+      li.textContent = conflictFilterModId
+        ? 'No overlaps involve this mod.'
+        : 'No overlaps — enabled mods touch distinct files and rows. ✓';
+    }
     conflictsListEl.appendChild(li);
     return;
   }
@@ -936,6 +1010,7 @@ function conflictTypeHint(type) {
     case "parameter": return "Same parameters/ row key in 2+ mods — higher priority value wins";
     case "asset": return "Same assets/ path in 2+ mods — higher priority file overwrites";
     case "pakAsset": return "Same pak_assets/ path in 2+ mods — higher priority file overwrites";
+    case "scripts": return "Same scripts/ path in 2+ mods — higher priority file overwrites in game scripts/";
     case "registry": return "Same AssetRegistry objectName in 2+ mods — higher priority entry wins";
     case "prebuilt": return "Same prebuilt package file name in 2+ mods — higher priority file overwrites in ~mods";
     default: return "Overlapping file between enabled mods";
@@ -1262,6 +1337,10 @@ conflictsShowAllBtn?.addEventListener("click", () => {
   conflictFilterModId = null;
   renderConflictsList();
 });
+
+for (const b of conflictTypeButtons) {
+  b.addEventListener('click', () => setConflictTypeFilter(b.dataset.conflictType || 'all'));
+}
 
 openRequirementsBtn?.addEventListener("click", () => setRequirementsModalOpen(true));
 

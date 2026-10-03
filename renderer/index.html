@@ -220,6 +220,16 @@
           </div>
         </div>
         <p class="conflicts-note">Only <strong>enabled</strong> mods are checked. When mods overlap, the <strong>higher priority</strong> mod wins — the winner is marked below. Raise a mod's <code>priority</code> in its <code>manifest.json</code> to make it win.</p>
+        <div class="segmented conflicts-type-filter" id="conflictsTypeFilter" role="tablist" aria-label="Filter overlaps by type">
+          <button type="button" class="segmented-btn is-active" data-conflict-type="all" role="tab" aria-selected="true">All</button>
+          <button type="button" class="segmented-btn" data-conflict-type="datatable" role="tab" aria-selected="false">Rows</button>
+          <button type="button" class="segmented-btn" data-conflict-type="parameter" role="tab" aria-selected="false">Parameters</button>
+          <button type="button" class="segmented-btn" data-conflict-type="asset" role="tab" aria-selected="false">Assets</button>
+          <button type="button" class="segmented-btn" data-conflict-type="pakAsset" role="tab" aria-selected="false">PAK</button>
+          <button type="button" class="segmented-btn" data-conflict-type="scripts" role="tab" aria-selected="false">Scripts</button>
+          <button type="button" class="segmented-btn" data-conflict-type="registry" role="tab" aria-selected="false">Registry</button>
+          <button type="button" class="segmented-btn" data-conflict-type="prebuilt" role="tab" aria-selected="false">Packages</button>
+        </div>
         <ul id="conflictsList" class="conflicts-list" aria-label="Overlapping files"></ul>
       </section>
     </div>
