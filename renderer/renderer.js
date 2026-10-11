@@ -43,10 +43,14 @@ const modSearchInput = $("modSearchInput");
 const clearSearchBtn = $("clearSearchBtn");
 const modSortSelect = $("modSortSelect");
 const modCountBadge = $("modCountBadge");
-const statusModsText = $("statusModsText");
-const statusModsDot = $("statusModsDot");
-const statusGameText = $("statusGameText");
-const statusGameDot = $("statusGameDot");
+const statusHealthBtn = $("statusHealthBtn");
+const statusHealthDot = $("statusHealthDot");
+const statusHealthText = $("statusHealthText");
+const statusHint = $("statusHint");
+const statusLibrary = $("statusLibrary");
+const statusOverlapsBtn = $("statusOverlapsBtn");
+const statusOverlapsText = $("statusOverlapsText");
+const statusVersionBtn = $("statusVersionBtn");
 const toastRoot = $("toastRoot");
 const filterButtons = Array.from(document.querySelectorAll('[data-filter]'));
 const conflictsTypeFilterEl = $('conflictsTypeFilter');
@@ -86,10 +90,15 @@ const setupInstallSigpatchBtn = $("setupInstallSigpatchBtn");
 const runSetupWizardBtn = $("runSetupWizardBtn");
 
 let currentModsFolder = null;
+let currentGameExePath = null;
+let currentModsFolderOverride = null;
 let lastModsState = null;
 let packageModalCanClose = false;
 let latestReleaseUrl = null;
 let activeModToolsClose = null;
+let lastRequirements = [];
+let appVersion = null;
+let lastInstall = null; // { ok, count, time }
 
 // Library view state
 let allMods = [];
@@ -413,6 +422,7 @@ function updateCounts() {
   if (modCountBadge) modCountBadge.textContent = `${enabled} / ${total} enabled`;
   const heading = $("modsHeading");
   if (heading) heading.textContent = total === 1 ? "Mod library" : "Mod library";
+  updateStatusBar();
 }
 
 /* ── Mod list rendering ─────────────────────────────────── */
@@ -880,6 +890,7 @@ function updateConflictsUI() {
       ? `${total} overlapping file${total === 1 ? "" : "s"} between enabled mods — click to inspect`
       : "No overlaps between enabled mods";
   }
+  updateStatusBar();
 }
 
 /** Refreshes per-card overlap badges in place (no full re-render). */
@@ -1137,13 +1148,6 @@ function dirname(filePath) {
   return filePath.slice(0, i);
 }
 
-function shortPath(p, max = 52) {
-  if (!p) return "";
-  if (p.length <= max) return p;
-  const half = Math.floor((max - 3) / 2);
-  return `${p.slice(0, half)}…${p.slice(-half)}`;
-}
-
 function setSettingsPaths(modsPath, gameExePath, unpackedAssetsPath, modsFolderOverride) {
   const gameFolder = dirname(gameExePath);
   if (gameFolderPathEl) {
@@ -1183,20 +1187,115 @@ function setSettingsPaths(modsPath, gameExePath, unpackedAssetsPath, modsFolderO
     clearModsFolderOverrideBtn.disabled = !modsFolderOverride;
   }
 
-  // Status bar
-  if (statusModsText) {
-    statusModsText.textContent = modsPath ? shortPath(modsPath) : "No mods folder";
-    statusModsText.title = modsPath || "";
+  currentGameExePath = gameExePath || null;
+  currentModsFolderOverride = modsFolderOverride || null;
+  updateStatusBar();
+}
+
+/* ── Status bar v2 ────────────────────────────────────── */
+
+function requirementIssues() {
+  if (!Array.isArray(lastRequirements)) return [];
+  return lastRequirements.filter((s) => s && (s.installed === false || s.installed === "outdated"));
+}
+
+function timeAgo(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 10) return "just now";
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function updateStatusBar() {
+  const issues = requirementIssues();
+  const total = allMods.length;
+  const enabled = allMods.filter((m) => m.enabled).length;
+  const overlaps = (currentConflicts && currentConflicts.total) || 0;
+  const modsTip = currentModsFolder || "(no mods folder)";
+  const gameTip = currentGameExePath || "(no game linked)";
+
+  // — Health (left, clickable): game > mods folder > requirements > ready —
+  let healthText = "Ready";
+  let healthOk = true;
+  let healthTitle = "";
+  let healthAction = "settings";
+  if (!currentGameExePath) {
+    healthText = "No game linked";
+    healthOk = false;
+    healthTitle = "Choose your Jujutsu Kaisen CC.exe in Settings";
+    healthAction = "settings";
+  } else if (!currentModsFolder) {
+    healthText = "No mods folder";
+    healthOk = false;
+    healthTitle = `Game linked but mods folder unavailable\nGame: ${gameTip}`;
+    healthAction = "settings";
+  } else if (issues.length > 0) {
+    healthOk = false;
+    healthAction = "requirements";
+    if (issues.length === 1 && issues[0].name) {
+      healthText = `${issues[0].name} — action needed`;
+    } else {
+      healthText = `${issues.length} requirement${issues.length === 1 ? "" : "s"} need attention`;
+    }
+    healthTitle = `${issues.map((s) => `${s.name}: ${s.statusDetail || s.installed}`).join("\n")}\nClick to open Requirements`;
+  } else {
+    healthTitle = `Mods: ${modsTip}\nGame: ${gameTip}\nClick to open Settings`;
   }
-  if (statusModsDot) {
-    statusModsDot.className = `status-dot${modsPath ? " status-dot--ok" : " status-dot--warn"}`;
+  if (statusHealthText) statusHealthText.textContent = healthText;
+  if (statusHealthDot) statusHealthDot.className = `status-dot${healthOk ? " status-dot--ok" : " status-dot--warn"}`;
+  if (statusHealthBtn) {
+    statusHealthBtn.title = healthTitle;
+    statusHealthBtn.dataset.action = healthAction;
   }
-  if (statusGameText) {
-    statusGameText.textContent = gameFolder ? shortPath(gameFolder) : "No game linked";
-    statusGameText.title = gameExePath || "";
+
+  // — Hint (center, contextual) —
+  let hint = "Tip: higher priority mods win file conflicts";
+  if (!currentGameExePath) hint = "Link your game EXE in Settings to begin";
+  else if (!currentModsFolder) hint = "Could not find mods folder — check Settings";
+  else if (issues.length > 0) hint = "Requirements need attention — click status to fix";
+  else if (total === 0) hint = "Drop mod folders into Content/Mods — or Add mod from file";
+  else if (enabled === 0) hint = "All mods disabled — enable at least one to install";
+  else if (overlaps > 0) hint = `${overlaps} overlap${overlaps === 1 ? "" : "s"} — higher priority wins, click to inspect`;
+  else if (lastInstall) {
+    hint = lastInstall.ok
+      ? `Installed ${lastInstall.count} mod${lastInstall.count === 1 ? "" : "s"} • ${timeAgo(lastInstall.time)} — ready to play`
+      : `Last install failed • ${timeAgo(lastInstall.time)}`;
   }
-  if (statusGameDot) {
-    statusGameDot.className = `status-dot${gameFolder ? " status-dot--ok" : " status-dot--warn"}`;
+  if (statusHint) {
+    statusHint.textContent = hint;
+    statusHint.title = hint;
+    statusHint.style.cursor = overlaps > 0 && issues.length === 0 && currentGameExePath && currentModsFolder ? "pointer" : "";
+  }
+
+  // — Library (right) —
+  if (statusLibrary) statusLibrary.textContent = `${enabled} / ${total} enabled`;
+  const showOverlaps = overlaps > 0;
+  if (statusOverlapsBtn) statusOverlapsBtn.hidden = !showOverlaps;
+  if (statusOverlapsText) statusOverlapsText.textContent = `${overlaps} overlap${overlaps === 1 ? "" : "s"}`;
+  if (statusOverlapsBtn && showOverlaps) {
+    statusOverlapsBtn.title = `${overlaps} overlapping file${overlaps === 1 ? "" : "s"} between enabled mods — click to inspect`;
+  }
+
+  // — Version (far right) —
+  if (statusVersionBtn) {
+    if (appVersion) {
+      statusVersionBtn.textContent = `v${appVersion}`;
+      if (latestReleaseUrl) {
+        statusVersionBtn.title = "Update available — click to open release";
+        statusVersionBtn.classList.add("has-update");
+      } else {
+        statusVersionBtn.title = `JJK CC Mod Manager v${appVersion}`;
+        statusVersionBtn.classList.remove("has-update");
+      }
+    } else {
+      statusVersionBtn.textContent = "v…";
+      statusVersionBtn.title = "App version";
+      statusVersionBtn.classList.remove("has-update");
+    }
   }
 }
 
@@ -1299,10 +1398,14 @@ function renderRequirements(statuses) {
 }
 
 function updateRequirementsBadge(statuses) {
-  if (!requirementsBadge) return;
-  const hasIssue =
-    Array.isArray(statuses) && statuses.some((s) => s.installed === false || s.installed === "outdated");
+  lastRequirements = Array.isArray(statuses) ? statuses : [];
+  if (!requirementsBadge) {
+    updateStatusBar();
+    return;
+  }
+  const hasIssue = lastRequirements.some((s) => s.installed === false || s.installed === "outdated");
   requirementsBadge.hidden = !hasIssue;
+  updateStatusBar();
 }
 
 async function loadAndRenderRequirements() {
@@ -1314,20 +1417,24 @@ async function loadAndRenderRequirements() {
 }
 
 function renderAppUpdateStatus(status) {
+  if (status && status.currentVersion) appVersion = String(status.currentVersion);
   if (!updateBadge || !openLatestReleaseBtn || !status || status.ok !== true) {
     if (updateBadge) updateBadge.hidden = true;
     latestReleaseUrl = null;
+    updateStatusBar();
     return;
   }
   if (!status.hasRelease || status.upToDate) {
     updateBadge.hidden = true;
     latestReleaseUrl = null;
+    updateStatusBar();
     return;
   }
   const latest = status.latestVersion || "latest";
   if (updateBadgeText) updateBadgeText.textContent = `Update available (${latest})`;
   updateBadge.hidden = false;
   latestReleaseUrl = status.latestUrl || null;
+  updateStatusBar();
 }
 
 async function checkAndRenderAppUpdateStatus() {
@@ -1658,6 +1765,8 @@ function setBulkBusy(busy) {
 
 function applyState(result) {
   currentModsFolder = result.modsFolder || null;
+  currentGameExePath = result.gameLocation || null;
+  currentModsFolderOverride = result.modsFolderOverride || null;
   const hasModsRoot = Boolean(currentModsFolder);
   allMods = Array.isArray(result.mods) ? result.mods : [];
   currentConflicts = result.conflicts && typeof result.conflicts === "object" ? result.conflicts : emptyConflicts();
@@ -1747,6 +1856,24 @@ async function init() {
 /* ── Events ─────────────────────────────────────────────── */
 
 conflictsBtn?.addEventListener("click", () => openConflictsModal(null));
+
+statusHealthBtn?.addEventListener("click", () => {
+  if (statusHealthBtn?.dataset.action === "requirements") setRequirementsModalOpen(true);
+  else setSettingsOpen(true);
+});
+statusOverlapsBtn?.addEventListener("click", () => openConflictsModal(null));
+statusHint?.addEventListener("click", () => {
+  if ((currentConflicts.total || 0) > 0 && currentModsFolder && currentGameExePath) openConflictsModal(null);
+});
+statusVersionBtn?.addEventListener("click", async () => {
+  if (latestReleaseUrl) {
+    try {
+      await window.modManagerApi.openExternalUrl(latestReleaseUrl);
+    } catch { /* ignore */ }
+  } else if (appVersion) {
+    toastInfo(`JJK CC Mod Manager v${appVersion}`, "You're up to date.");
+  }
+});
 
 closeJsonCheckBtn?.addEventListener("click", () => setJsonCheckModalOpen(false));
 jsonCheckModalEl?.addEventListener("click", (e) => {
@@ -2019,9 +2146,13 @@ packageAllBtn?.addEventListener("click", async () => {
     const output = await window.modManagerApi.packageAllMods(currentModsFolder);
     appendPackageLog(`[done] Output: ${output.outputDir}`);
     if (output.gamePaksModsDir) appendPackageLog(`[done] Game folder: ${output.gamePaksModsDir}`);
+    lastInstall = { ok: true, count: output && typeof output.count === "number" ? output.count : allMods.filter((m) => m.enabled).length, time: Date.now() };
+    updateStatusBar();
     toastSuccess("Mods installed", "Enabled mods were merged and installed into the game. You're ready to play!");
   } catch (error) {
     appendPackageLog(`[error] ${error.message}`);
+    lastInstall = { ok: false, count: 0, time: Date.now() };
+    updateStatusBar();
     toastError("Install failed", error.message);
   } finally {
     const enabledCount = allMods.filter((m) => m.enabled).length;

@@ -108,17 +108,20 @@
 
       <!-- ══ Status bar ════════════════════════════════════════════ -->
       <footer class="statusbar" aria-label="Status">
-        <span class="status-item" id="statusModsFolder" title="Mods folder">
-          <span class="status-dot" id="statusModsDot"></span>
-          <span id="statusModsText">No mods folder</span>
-        </span>
+        <button type="button" class="status-health" id="statusHealthBtn" title="Setup status — click to open Settings">
+          <span class="status-dot" id="statusHealthDot"></span>
+          <span id="statusHealthText">Starting…</span>
+        </button>
         <span class="status-sep" aria-hidden="true"></span>
-        <span class="status-item" id="statusGameFolder" title="Game location">
-          <span class="status-dot" id="statusGameDot"></span>
-          <span id="statusGameText">No game linked</span>
-        </span>
+        <span class="status-item status-hint" id="statusHint">Tip: higher priority mods win file conflicts</span>
         <span class="status-spacer"></span>
-        <span class="status-item status-hint">Tip: higher priority mods win file conflicts</span>
+        <span class="status-item status-meta" id="statusLibrary" title="Enabled / total mods">0 / 0 enabled</span>
+        <button type="button" class="status-overlaps-btn" id="statusOverlapsBtn" hidden title="Show overlapping files">
+          <span aria-hidden="true">⚠</span>
+          <span id="statusOverlapsText">0 overlaps</span>
+        </button>
+        <span class="status-sep" aria-hidden="true"></span>
+        <button type="button" class="status-version" id="statusVersionBtn" title="App version">v…</button>
       </footer>
     </div>
 
