@@ -60,11 +60,30 @@ const conflictsListEl = $("conflictsList");
 const conflictsSubEl = $("conflictsSub");
 const conflictsShowAllBtn = $("conflictsShowAllBtn");
 const closeConflictsBtn = $("closeConflictsBtn");
+const jsonCheckModalEl = $("jsonCheckModal");
+const jsonCheckHeadingEl = $("jsonCheckHeading");
+const jsonCheckSubEl = $("jsonCheckSub");
+const jsonCheckListEl = $("jsonCheckList");
+const closeJsonCheckBtn = $("closeJsonCheckBtn");
 const installConfirmModalEl = $("installConfirmModal");
 const installConfirmTextEl = $("installConfirmText");
 const installConfirmDetailEl = $("installConfirmDetail");
 const installConfirmOkBtn = $("installConfirmOkBtn");
 const installConfirmCancelBtn = $("installConfirmCancelBtn");
+const setupWizardModalEl = $("setupWizardModal");
+const setupStepsBar = $("setupStepsBar");
+const setupStepPanes = [$("setupStep1"), $("setupStep2"), $("setupStep3")];
+const setupBackBtn = $("setupBackBtn");
+const setupNextBtn = $("setupNextBtn");
+const closeSetupWizardBtn = $("closeSetupWizardBtn");
+const setupExePathEl = $("setupExePath");
+const setupPickExeBtn = $("setupPickExeBtn");
+const setupCleanupListEl = $("setupCleanupList");
+const setupDeleteSelectedBtn = $("setupDeleteSelectedBtn");
+const setupCleanupResultEl = $("setupCleanupResult");
+const setupSigpatchBoxEl = $("setupSigpatchBox");
+const setupInstallSigpatchBtn = $("setupInstallSigpatchBtn");
+const runSetupWizardBtn = $("runSetupWizardBtn");
 
 let currentModsFolder = null;
 let lastModsState = null;
@@ -171,9 +190,13 @@ function setPackageProgress(progress, stepText) {
   if (packageStepTextEl && stepText) packageStepTextEl.textContent = `${stepText} (${Math.round(p)}%)`;
 }
 
-function appendPackageLog(line) {
+function appendPackageLog(line, isError = false) {
   if (!packageConsoleEl) return;
-  packageConsoleEl.textContent += `${line}\n`;
+  const error = isError || /^\[error\]/i.test(String(line ?? ""));
+  const div = document.createElement("div");
+  div.className = error ? "log-line log-error" : "log-line";
+  div.textContent = String(line ?? "");
+  packageConsoleEl.appendChild(div);
   packageConsoleEl.scrollTop = packageConsoleEl.scrollHeight;
 }
 
@@ -735,6 +758,28 @@ function buildToolsMenu(mod) {
     }
   });
 
+  addItem("Check JSONs for errors", "🔍", async (item) => {
+    item.disabled = true;
+    try {
+      const result = await window.modManagerApi.validateModJson(mod.fullPath);
+      renderJsonCheckResults(mod, result);
+      setJsonCheckModalOpen(true);
+      const bad = result && Array.isArray(result.errors) ? result.errors.length : 0;
+      const total = result && Array.isArray(result.checked) ? result.checked.length : 0;
+      if (bad > 0) {
+        toastError("JSON errors found", `${bad} of ${total} file${total === 1 ? "" : "s"} in “${mod.title}” failed to parse.`);
+      } else if (total === 0) {
+        toastInfo("No JSON files", `“${mod.title}” contains no .json files to check.`);
+      } else {
+        toastSuccess("JSON check passed", `${total} file${total === 1 ? "" : "s"} in “${mod.title}” are valid.`);
+      }
+    } catch (error) {
+      toastError("JSON check failed", error.message);
+    } finally {
+      item.disabled = false;
+    }
+  });
+
   addItem("Package mod (jjkmod)", "📦", async (item) => {
     // Ask where to save first, so cancelling never opens the progress modal.
     let savePath;
@@ -1017,6 +1062,72 @@ function conflictTypeHint(type) {
   }
 }
 
+/* ── JSON check modal (per-mod Tools → Check JSONs) ─────── */
+
+function setJsonCheckModalOpen(open) {
+  if (jsonCheckModalEl) jsonCheckModalEl.hidden = !open;
+}
+
+/**
+ * Renders per-file JSON validation results: errored files first (with the
+ * parser message), then the files that passed. Built with textContent so
+ * file contents in error messages can't inject HTML.
+ */
+function renderJsonCheckResults(mod, result) {
+  const checked = (result && Array.isArray(result.checked) ? result.checked : []).slice().sort((a, b) => a.localeCompare(b));
+  const errors = result && Array.isArray(result.errors) ? result.errors : [];
+  const badSet = new Set(errors.map((e) => e && e.file));
+  const title = (mod && (mod.title || mod.id)) || (result && result.modId) || "Mod";
+  if (jsonCheckHeadingEl) jsonCheckHeadingEl.textContent = `JSON check — ${title}`;
+  if (jsonCheckSubEl) {
+    if (!checked.length) {
+      jsonCheckSubEl.textContent = "No .json files found in this mod.";
+    } else if (!errors.length) {
+      jsonCheckSubEl.textContent = `All ${checked.length} JSON file${checked.length === 1 ? "" : "s"} are valid.`;
+    } else {
+      jsonCheckSubEl.textContent = `${errors.length} of ${checked.length} JSON file${checked.length === 1 ? "" : "s"} failed to parse — fix these before packaging.`;
+    }
+  }
+  if (!jsonCheckListEl) return;
+  jsonCheckListEl.innerHTML = "";
+  if (!checked.length) {
+    const li = document.createElement("li");
+    li.className = "conflicts-empty";
+    li.textContent = "Nothing to check — this mod contains no .json files.";
+    jsonCheckListEl.appendChild(li);
+    return;
+  }
+  const ordered = [
+    ...checked.filter((f) => badSet.has(f)),
+    ...checked.filter((f) => !badSet.has(f)),
+  ];
+  const errorByFile = new Map(errors.map((e) => [e && e.file, e && e.message]));
+  for (const file of ordered) {
+    const bad = badSet.has(file);
+    const li = document.createElement("li");
+    li.className = `json-check-item${bad ? " json-check-item--error" : " json-check-item--ok"}`;
+    const top = document.createElement("div");
+    top.className = "json-check-top";
+    const badge = document.createElement("span");
+    badge.className = `json-check-badge${bad ? " json-check-badge--error" : " json-check-badge--ok"}`;
+    badge.textContent = bad ? "Error" : "OK";
+    top.appendChild(badge);
+    const name = document.createElement("span");
+    name.className = "json-check-file";
+    name.textContent = file;
+    name.title = file;
+    top.appendChild(name);
+    li.appendChild(top);
+    if (bad) {
+      const msg = document.createElement("div");
+      msg.className = "json-check-error";
+      msg.textContent = errorByFile.get(file) || "Invalid JSON.";
+      li.appendChild(msg);
+    }
+    jsonCheckListEl.appendChild(li);
+  }
+}
+
 /* ── Paths / status bar ─────────────────────────────────── */
 
 function dirname(filePath) {
@@ -1228,6 +1339,312 @@ async function checkAndRenderAppUpdateStatus() {
   }
 }
 
+/* ── Setup wizard ───────────────────────────────────────── */
+
+let setupStep = 1;
+let setupStatusCache = null;
+let setupCleanupChecks = []; // [{ id, checkbox }] — rebuilt on every render
+
+function setSetupWizardOpen(open) {
+  if (setupWizardModalEl) setupWizardModalEl.hidden = !open;
+}
+
+function openSetupWizard() {
+  setupStep = 1;
+  setupStatusCache = null;
+  setupCleanupChecks = [];
+  if (setupCleanupResultEl) setupCleanupResultEl.textContent = "";
+  renderSetupStep();
+  setSetupWizardOpen(true);
+  refreshSetupStatus();
+}
+
+/** Any exit marks the wizard seen — it never nags, and Settings can relaunch it. */
+async function closeSetupWizardAndComplete(skipped) {
+  try {
+    await window.modManagerApi.completeSetupWizard?.();
+  } catch {
+    /* flag write is best-effort — the wizard just closes */
+  }
+  setSetupWizardOpen(false);
+  if (skipped) {
+    toastInfo("Setup skipped", "You can rerun the wizard any time from Settings.");
+  } else {
+    toastSuccess("Setup complete", "Your game is linked and ready for mods.");
+  }
+}
+
+function renderSetupStep() {
+  setupStepPanes.forEach((pane, i) => {
+    if (pane) pane.hidden = i !== setupStep - 1;
+  });
+  const items = setupStepsBar ? Array.from(setupStepsBar.querySelectorAll("li")) : [];
+  for (const li of items) {
+    const n = Number(li.dataset.setupStep || 0);
+    li.classList.toggle("is-active", n === setupStep);
+    li.classList.toggle("is-done", n < setupStep);
+    const num = li.querySelector(".setup-step-num");
+    if (num) num.textContent = n < setupStep ? "✓" : String(n);
+  }
+  if (setupBackBtn) setupBackBtn.disabled = setupStep === 1;
+  if (setupNextBtn) setupNextBtn.textContent = setupStep === 3 ? "Finish ✓" : "Next →";
+}
+
+async function refreshSetupStatus() {
+  let status = null;
+  try {
+    status = await window.modManagerApi.getSetupStatus();
+  } catch (err) {
+    toastError("Setup status failed", err?.message || String(err));
+    return;
+  }
+  setupStatusCache = status;
+  renderSetupExe(status);
+  renderSetupCleanup(status);
+  renderSetupSigpatch(status);
+}
+
+function renderSetupExe(status) {
+  if (!setupExePathEl) return;
+  const exe = status && status.gameExePath;
+  if (exe) {
+    setupExePathEl.classList.remove("path-line--empty");
+    setupExePathEl.textContent = exe;
+    setupExePathEl.title = exe;
+  } else {
+    setupExePathEl.classList.add("path-line--empty");
+    setupExePathEl.textContent = "No game selected yet.";
+    setupExePathEl.title = "";
+  }
+}
+
+function updateSetupDeleteButton() {
+  if (!setupDeleteSelectedBtn) return;
+  setupDeleteSelectedBtn.disabled = !setupCleanupChecks.some((c) => c.checkbox.checked && !c.checkbox.disabled);
+}
+
+function renderSetupCleanup(status) {
+  if (!setupCleanupListEl) return;
+  setupCleanupListEl.innerHTML = "";
+  setupCleanupChecks = [];
+
+  if (!status || !status.gameExePath) {
+    const li = document.createElement("li");
+    li.className = "conflicts-empty";
+    li.textContent = "Select your game first (step 1) — then the wizard can look for old files.";
+    setupCleanupListEl.appendChild(li);
+    updateSetupDeleteButton();
+    return;
+  }
+
+  const items = (status.cleanup && status.cleanup.items) || [];
+  for (const item of items) {
+    const li = document.createElement("li");
+    li.className = "req-item";
+
+    const label = document.createElement("label");
+    label.className = "check-row setup-check";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(item.found);
+    checkbox.disabled = !item.found;
+    checkbox.setAttribute("aria-label", `Delete ${item.name}`);
+    const ui = document.createElement("span");
+    ui.className = "check-ui";
+    ui.setAttribute("aria-hidden", "true");
+    label.append(checkbox, ui);
+    checkbox.addEventListener("change", updateSetupDeleteButton);
+    setupCleanupChecks.push({ id: item.id, checkbox });
+
+    const info = document.createElement("div");
+    info.className = "req-info";
+    const name = document.createElement("span");
+    name.className = "req-name";
+    name.textContent = item.name;
+    info.appendChild(name);
+    const desc = document.createElement("span");
+    desc.className = "req-description";
+    desc.textContent = item.description;
+    info.appendChild(desc);
+    const existing = (item.paths || []).filter((p) => p.exists).map((p) => p.rel);
+    if (existing.length > 0) {
+      const found = document.createElement("span");
+      found.className = "req-description";
+      found.textContent = `Found: ${existing.join(", ")}`;
+      info.appendChild(found);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "req-actions";
+    const badge = document.createElement("span");
+    if (item.found) {
+      badge.className = "req-status req-status--outdated";
+      badge.textContent = "Found";
+    } else {
+      badge.className = "req-status req-status--ok";
+      badge.textContent = "Clean";
+    }
+    actions.appendChild(badge);
+
+    li.append(label, info, actions);
+    setupCleanupListEl.appendChild(li);
+  }
+  updateSetupDeleteButton();
+}
+
+function renderSetupSigpatch(status) {
+  const sig = (status && status.sigpatch) || { installed: null, statusDetail: null };
+  if (setupSigpatchBoxEl) {
+    setupSigpatchBoxEl.innerHTML = "";
+    const title = document.createElement("h3");
+    title.className = "setting-card-title";
+    title.textContent = "UTOC Signature Bypass";
+    setupSigpatchBoxEl.appendChild(title);
+    const row = document.createElement("div");
+    row.className = "req-item setup-sigpatch-row";
+    const info = document.createElement("div");
+    info.className = "req-info";
+    const desc = document.createElement("span");
+    desc.className = "req-description";
+    desc.textContent = "Required to load modded IoStore (.utoc/.ucas) containers.";
+    info.appendChild(desc);
+    if (sig.statusDetail && sig.installed !== true) {
+      const detail = document.createElement("span");
+      detail.className = "req-description";
+      detail.textContent = sig.statusDetail;
+      info.appendChild(detail);
+    }
+    const actions = document.createElement("div");
+    actions.className = "req-actions";
+    const badge = document.createElement("span");
+    if (sig.installed === true) {
+      badge.className = "req-status req-status--ok";
+      badge.textContent = "Installed";
+    } else if (sig.installed === false) {
+      badge.className = "req-status req-status--missing";
+      badge.textContent = "Not found";
+    } else {
+      badge.className = "req-status req-status--unknown";
+      badge.textContent = "Unknown";
+    }
+    if (sig.statusDetail) badge.title = sig.statusDetail;
+    actions.appendChild(badge);
+    row.append(info, actions);
+    setupSigpatchBoxEl.appendChild(row);
+  }
+  if (setupInstallSigpatchBtn) {
+    if (!status || !status.gameExePath) {
+      setupInstallSigpatchBtn.disabled = true;
+      setupInstallSigpatchBtn.textContent = "Select your game first";
+    } else if (sig.installed === true) {
+      setupInstallSigpatchBtn.disabled = false;
+      setupInstallSigpatchBtn.textContent = "Reinstall signature bypass";
+    } else if (sig.installed === false) {
+      setupInstallSigpatchBtn.disabled = false;
+      setupInstallSigpatchBtn.textContent = "Install signature bypass";
+    } else {
+      setupInstallSigpatchBtn.disabled = true;
+      setupInstallSigpatchBtn.textContent = "Install signature bypass";
+    }
+  }
+}
+
+setupPickExeBtn?.addEventListener("click", async () => {
+  try {
+    const result = await window.modManagerApi.changeGameLocation();
+    if (!result || result.cancelled) return;
+    applyState(result);
+    await refreshSetupStatus();
+    toastSuccess("Game linked", result.gameLocation || "Game location updated.");
+  } catch (err) {
+    toastError("Could not link game", err?.message || String(err));
+  }
+});
+
+setupDeleteSelectedBtn?.addEventListener("click", async () => {
+  const ids = setupCleanupChecks
+    .filter((c) => c.checkbox.checked && !c.checkbox.disabled)
+    .map((c) => c.id);
+  if (!ids.length) return;
+  const ok = window.confirm(
+    `Delete legacy setup files (${ids.join(", ")}) from the game folder?\nThis cannot be undone.`
+  );
+  if (!ok) return;
+  setupDeleteSelectedBtn.disabled = true;
+  setupDeleteSelectedBtn.textContent = "Deleting…";
+  try {
+    const res = await window.modManagerApi.deleteLegacySetup(ids);
+    setupStatusCache = { ...(setupStatusCache || {}), cleanup: res.cleanup };
+    renderSetupCleanup(setupStatusCache);
+    const removed = Array.isArray(res.removed) ? res.removed : [];
+    const errors = Array.isArray(res.errors) ? res.errors : [];
+    if (setupCleanupResultEl) {
+      if (errors.length > 0) {
+        setupCleanupResultEl.textContent = `Deleted ${removed.length} path(s), ${errors.length} failed: ${errors.join("; ")}`;
+      } else if (removed.length > 0) {
+        setupCleanupResultEl.textContent = `Removed: ${removed.join(", ")}`;
+      } else {
+        setupCleanupResultEl.textContent = "Nothing to remove — already clean.";
+      }
+    }
+    if (errors.length > 0) {
+      toastError("Cleanup incomplete", errors.join("\n"));
+    } else if (removed.length > 0) {
+      toastSuccess("Cleanup done", `Removed ${removed.length} legacy path(s).`);
+    }
+  } catch (err) {
+    toastError("Cleanup failed", err?.message || String(err));
+  } finally {
+    setupDeleteSelectedBtn.textContent = "Delete selected";
+    updateSetupDeleteButton();
+  }
+});
+
+setupInstallSigpatchBtn?.addEventListener("click", async () => {
+  setupInstallSigpatchBtn.disabled = true;
+  setupInstallSigpatchBtn.textContent = "Installing…";
+  try {
+    const updated = await window.modManagerApi.installRequirement("signature-bypass");
+    await refreshSetupStatus();
+    renderRequirements(updated);
+    updateRequirementsBadge(updated);
+    toastSuccess("Signature bypass installed", "Modded containers will now load in-game.");
+  } catch (err) {
+    toastError("Install failed", err?.message || String(err));
+  } finally {
+    renderSetupSigpatch(setupStatusCache);
+  }
+});
+
+setupBackBtn?.addEventListener("click", () => {
+  if (setupStep > 1) {
+    setupStep -= 1;
+    renderSetupStep();
+  }
+});
+
+setupNextBtn?.addEventListener("click", () => {
+  if (setupStep < 3) {
+    if (setupStep === 1 && !(setupStatusCache && setupStatusCache.gameExePath)) {
+      toastError("Choose your game EXE first", "The wizard needs your Jujutsu Kaisen CC.exe before continuing.");
+      return;
+    }
+    setupStep += 1;
+    renderSetupStep();
+    return;
+  }
+  closeSetupWizardAndComplete(false);
+});
+
+closeSetupWizardBtn?.addEventListener("click", () => closeSetupWizardAndComplete(true));
+setupWizardModalEl?.addEventListener("click", (e) => {
+  if (e.target === setupWizardModalEl) closeSetupWizardAndComplete(true);
+});
+runSetupWizardBtn?.addEventListener("click", () => {
+  setSettingsOpen(false);
+  openSetupWizard();
+});
+
 /* ── State ──────────────────────────────────────────────── */
 
 function setBulkBusy(busy) {
@@ -1312,11 +1729,13 @@ async function init() {
       lastModsState = result;
       appReady = true;
       pullInitialModFiles();
+      if (result && result.setupWizardCompleted === false) openSetupWizard();
       return;
     }
     applyState(result);
     appReady = true;
     pullInitialModFiles();
+    if (result && result.setupWizardCompleted === false) openSetupWizard();
   } catch (err) {
     renderEmptyState();
     toastError("Failed to initialise", err?.message || String(err));
@@ -1328,6 +1747,11 @@ async function init() {
 /* ── Events ─────────────────────────────────────────────── */
 
 conflictsBtn?.addEventListener("click", () => openConflictsModal(null));
+
+closeJsonCheckBtn?.addEventListener("click", () => setJsonCheckModalOpen(false));
+jsonCheckModalEl?.addEventListener("click", (e) => {
+  if (e.target === jsonCheckModalEl) setJsonCheckModalOpen(false);
+});
 
 closeConflictsBtn?.addEventListener("click", () => setConflictsModalOpen(false));
 conflictsModalEl?.addEventListener("click", (e) => {
@@ -1566,7 +1990,8 @@ window.modManagerApi.onPackageProgress?.((payload) => {
   }
   if (payload.type === "log") {
     const prefix = payload.stream ? `[${payload.stream}] ` : "";
-    appendPackageLog(`${prefix}${payload.message ?? ""}`);
+    const isError = payload.stream === "stderr" || payload.stream === "error";
+    appendPackageLog(`${prefix}${payload.message ?? ""}`, isError);
     return;
   }
   if (payload.type === "error") {
@@ -1675,8 +2100,13 @@ modSortSelect?.addEventListener("change", () => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    if (setupWizardModalEl && !setupWizardModalEl.hidden) {
+      closeSetupWizardAndComplete(true);
+      return;
+    }
     if (installConfirmModalEl && !installConfirmModalEl.hidden) resolvePendingInstall(false);
     else if (conflictsModalEl && !conflictsModalEl.hidden) setConflictsModalOpen(false);
+    else if (jsonCheckModalEl && !jsonCheckModalEl.hidden) setJsonCheckModalOpen(false);
     else if (requirementsModalEl && !requirementsModalEl.hidden) setRequirementsModalOpen(false);
     else if (packageModalEl && !packageModalEl.hidden && packageModalCanClose) setPackageModalOpen(false);
     else if (settingsModalEl && !settingsModalEl.hidden) setSettingsOpen(false);

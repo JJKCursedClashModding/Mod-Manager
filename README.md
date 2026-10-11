@@ -15,7 +15,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
    npm install
    npm start
    ```
-2. On first launch, select `Jujutsu Kaisen CC.exe`.
+2. On first launch, a setup wizard walks you through three steps: select `Jujutsu Kaisen CC.exe`, remove unneeded legacy files (`UE4SS` / `DataTablePatcher` — only keep them if you develop UE4SS Lua mods), and install the signature bypass. You can rerun the wizard any time from **Settings → Run setup wizard…**.
 3. Put your mods in the detected `Content/Mods` folder (or set an override in Settings).
 4. Enable the mods you want in the list.
 5. Click **Install enabled mods** to install them into `Content/Paks/~mods`.

@@ -637,6 +637,53 @@ img.brand-logo {
 .conflict-mod-pri { color: var(--faint); font-weight: 600; font-size: 10.5px; }
 .conflict-mod--winner .conflict-mod-pri { color: #8df0ae; }
 
+/* JSON check modal */
+.json-check-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.json-check-item {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+.json-check-item--error { border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.06); }
+.json-check-item--ok { border-color: rgba(74, 222, 128, 0.3); }
+.json-check-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.json-check-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.json-check-badge--ok { color: #8df0ae; border-color: rgba(74, 222, 128, 0.4); background: var(--success-bg); }
+.json-check-badge--error { color: #fca5a5; border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.1); }
+.json-check-file {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.json-check-error {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #fca5a5;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: 7px;
+  padding: 6px 9px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* Content chips */
 .mod-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .chip {
@@ -883,6 +930,8 @@ img.brand-logo {
   word-break: break-word;
 }
 .package-console:empty::before { content: "Waiting for output…"; color: var(--faint); font-style: italic; }
+.package-console .log-line { color: inherit; }
+.package-console .log-error { color: #ff6b6b; font-weight: 600; }
 
 /* Requirements */
 .requirements-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; }
@@ -967,6 +1016,66 @@ img.brand-logo {
 ::-webkit-scrollbar-thumb { background: #2c3550; border-radius: 8px; border: 2px solid var(--bg-0); }
 ::-webkit-scrollbar-thumb:hover { background: #3a4666; }
 .app::-webkit-scrollbar-thumb { border-color: var(--bg-0); }
+
+/* ── Setup wizard ─────────────────────────────────────────── */
+.setup-steps {
+  list-style: none;
+  display: flex;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.setup-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--faint);
+  background: rgba(255, 255, 255, 0.02);
+}
+.setup-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: #2a3247;
+  border: 1px solid rgba(100, 115, 150, 0.5);
+  flex-shrink: 0;
+}
+.setup-steps li.is-active {
+  color: var(--text);
+  border-color: rgba(109, 124, 255, 0.55);
+  background: var(--accent-soft);
+}
+.setup-steps li.is-active .setup-step-num {
+  background: linear-gradient(135deg, #4c6fff, #8a5cff);
+  border-color: rgba(170, 180, 255, 0.7);
+  color: #fff;
+}
+.setup-steps li.is-done { color: #b9f4cd; }
+.setup-steps li.is-done .setup-step-num {
+  background: var(--success-bg);
+  border-color: rgba(74, 222, 128, 0.5);
+  color: #8df0ae;
+}
+.setup-step-title { margin: 0 0 6px; font-size: 14px; font-weight: 750; }
+.setup-step-text { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+.setup-step-text code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11px; color: #c3cbff; }
+.setup-check { flex: 0 0 auto; }
+.setup-delete-row { margin-top: 10px; align-items: center; }
+.setup-result { font-size: 12px; color: var(--muted); }
+.setup-sigpatch-box { margin: 0; }
+.setup-sigpatch-row { border: none; background: transparent; padding: 4px 0 0; }
+.setup-footer { margin-top: 16px; align-items: center; }
+.setup-footer-spacer { flex: 1; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 760px) {

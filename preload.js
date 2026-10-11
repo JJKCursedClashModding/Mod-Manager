@@ -32,9 +32,13 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   pickSaveJjkmodPath: (modFolderPath) => ipcRenderer.invoke("pick-save-jjkmod-path", modFolderPath),
   packageSingleMod: (modFolderPath, outPath) => ipcRenderer.invoke("package-single-mod", modFolderPath, outPath),
   createModManifest: (modFolderPath) => ipcRenderer.invoke("create-mod-manifest", modFolderPath),
+  validateModJson: (modFolderPath) => ipcRenderer.invoke("validate-mod-json", modFolderPath),
   setVerboseOutput: (verbose) => ipcRenderer.invoke("set-verbose-output", verbose),
   launchGame: () => ipcRenderer.invoke("launch-game"),
   checkRequirements: () => ipcRenderer.invoke("check-requirements"),
   installRequirement: (reqId) => ipcRenderer.invoke("install-requirement", reqId),
+  getSetupStatus: () => ipcRenderer.invoke("get-setup-status"),
+  deleteLegacySetup: (targetIds) => ipcRenderer.invoke("delete-legacy-setup", targetIds),
+  completeSetupWizard: () => ipcRenderer.invoke("complete-setup-wizard"),
   checkAppUpdate: () => ipcRenderer.invoke("check-app-update"),
 });

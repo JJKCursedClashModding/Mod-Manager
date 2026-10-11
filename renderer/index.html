@@ -161,6 +161,14 @@
           </div>
 
           <div class="setting-card">
+            <h3 class="setting-card-title">Setup wizard</h3>
+            <p class="modal-sub" style="margin-bottom: 9px;">Re-run the first-launch wizard: game location, old-file cleanup and signature bypass.</p>
+            <div class="setting-row">
+              <button type="button" id="runSetupWizardBtn" class="btn btn-small btn-secondary">Run setup wizard…</button>
+            </div>
+          </div>
+
+          <div class="setting-card">
             <h3 class="setting-card-title">Output</h3>
             <label class="check-row">
               <input type="checkbox" id="verboseOutputCheckbox" />
@@ -168,6 +176,59 @@
               <span class="check-text">Verbose output <em>— show raw command stdout/stderr in the packaging console</em></span>
             </label>
           </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ══ Setup wizard ════════════════════════════════════════════ -->
+    <div id="setupWizardModal" class="modal-overlay" hidden>
+      <section class="modal-panel" aria-labelledby="setupWizardHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="setupWizardHeading" class="modal-title">Welcome — let's get you set up</h2>
+            <p class="modal-sub">Three quick steps to get mods working in-game</p>
+          </div>
+          <button type="button" id="closeSetupWizardBtn" class="btn btn-small btn-ghost" title="Skip the wizard (you can rerun it from Settings)">Skip ✕</button>
+        </div>
+
+        <ol id="setupStepsBar" class="setup-steps" aria-label="Setup progress">
+          <li data-setup-step="1"><span class="setup-step-num">1</span><span class="setup-step-label">Game location</span></li>
+          <li data-setup-step="2"><span class="setup-step-num">2</span><span class="setup-step-label">Clean up old files</span></li>
+          <li data-setup-step="3"><span class="setup-step-num">3</span><span class="setup-step-label">Signature bypass</span></li>
+        </ol>
+
+        <div id="setupStep1" class="setup-step">
+          <h3 class="setup-step-title">Where is your game installed?</h3>
+          <p class="setup-step-text">Point the manager at your <code>Jujutsu Kaisen CC.exe</code> so it can find your mods folder.</p>
+          <p id="setupExePath" class="path-line path-line--empty">No game selected yet.</p>
+          <div class="setting-row">
+            <button type="button" id="setupPickExeBtn" class="btn btn-small btn-secondary">Choose game EXE…</button>
+          </div>
+        </div>
+
+        <div id="setupStep2" class="setup-step" hidden>
+          <h3 class="setup-step-title">Remove old setup files?</h3>
+          <p class="setup-step-text">Older guides used <strong>UE4SS</strong> and a <strong>DataTablePatcher</strong> Lua mod. This manager no longer needs them — <strong>unless you develop UE4SS Lua mods</strong>, deleting them avoids conflicts and saves space. Tick what to remove:</p>
+          <ul id="setupCleanupList" class="requirements-list" aria-label="Legacy setup files"></ul>
+          <div class="setting-row setup-delete-row">
+            <button type="button" id="setupDeleteSelectedBtn" class="btn btn-small btn-secondary" disabled>Delete selected</button>
+            <span id="setupCleanupResult" class="setup-result" role="status"></span>
+          </div>
+        </div>
+
+        <div id="setupStep3" class="setup-step" hidden>
+          <h3 class="setup-step-title">Install the signature bypass</h3>
+          <p class="setup-step-text">Mods ship as IoStore containers (<code>.utoc/.ucas</code>) — the game only loads them with this small bypass installed next to the game EXE.</p>
+          <div id="setupSigpatchBox" class="setting-card setup-sigpatch-box"></div>
+          <div class="setting-row setup-delete-row">
+            <button type="button" id="setupInstallSigpatchBtn" class="btn btn-small btn-secondary">Install signature bypass</button>
+          </div>
+        </div>
+
+        <div class="setting-row setup-footer">
+          <button type="button" id="setupBackBtn" class="btn btn-small btn-ghost">← Back</button>
+          <span class="setup-footer-spacer"></span>
+          <button type="button" id="setupNextBtn" class="btn btn-small btn-primary">Next →</button>
         </div>
       </section>
     </div>
@@ -231,6 +292,22 @@
           <button type="button" class="segmented-btn" data-conflict-type="prebuilt" role="tab" aria-selected="false">Packages</button>
         </div>
         <ul id="conflictsList" class="conflicts-list" aria-label="Overlapping files"></ul>
+      </section>
+    </div>
+
+    <!-- ══ JSON check modal (per-mod Tools → Check JSONs) ══════════ -->
+    <div id="jsonCheckModal" class="modal-overlay" hidden>
+      <section class="modal-panel" aria-labelledby="jsonCheckHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="jsonCheckHeading" class="modal-title">JSON check</h2>
+            <p id="jsonCheckSub" class="modal-sub">Checking JSON files…</p>
+          </div>
+          <div class="modal-head-actions">
+            <button type="button" id="closeJsonCheckBtn" class="btn btn-small btn-ghost">✕ Close</button>
+          </div>
+        </div>
+        <ul id="jsonCheckList" class="json-check-list" aria-label="JSON check results"></ul>
       </section>
     </div>
 

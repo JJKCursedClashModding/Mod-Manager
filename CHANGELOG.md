@@ -2,6 +2,16 @@
 
 All notable changes to the JJK CC Mod Manager since `0.2.0`.
 
+## [Unreleased]
+
+### Setup wizard
+
+- New first-launch setup wizard (auto-opens until completed, rerunnable via **Settings → Run setup wizard…**) with three steps:
+  1. **Game location** — pick `Jujutsu Kaisen CC.exe` (replaces the bare native dialog on first run).
+  2. **Clean up old files** — detects legacy `UE4SS` (`dwmapi.dll` + `ue4ss/`) and `DataTablePatcher` (`ue4ss/Mods/DataTablePatcher/`) installs next to the game exe and deletes whatever you tick (players don't need either; only UE4SS Lua mod developers should keep UE4SS).
+  3. **Signature bypass** — shows install state and installs the bundled `SigBypasser` zip when missing (reuses the Requirements pipeline).
+- Completion is remembered in `config.json` (`setupWizardCompleted`); closing or skipping also marks it seen so it never nags.
+
 ## [0.3.0] — 2026-10-01
 
 Covers `0.2.0...0.3.0` (plus `db80703` CI follow-up on top).
