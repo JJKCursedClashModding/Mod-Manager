@@ -9,6 +9,7 @@
     "prestart": "npm run patcher:build",
     "patcher:build": "npm --prefix ./AssetRegistryPatcher run build && npm --prefix ./CookedDatatablePatcher run build",
     "start": "electron .",
+    "remote-host": "node server.js",
     "prebuild": "npm run patcher:build",
     "build": "electron-builder --win --x64",
     "prebuild:portable": "npm run patcher:build",
@@ -23,6 +24,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "server.js",
+      "REMOTE.md",
       "lib/**",
       "scripts/**",
       "renderer/**",
