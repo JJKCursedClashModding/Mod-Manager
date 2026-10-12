@@ -41,7 +41,7 @@ npm run remote-host -- --port 3131 --token <secret>
 
 ## Known limitations (follow-ups)
 
-- Path pickers are `prompt()`s for host-local paths — no remote file browser yet.
+- Path pickers open a modal host file browser (drives, breadcrumbs via Up, filter, manual-path fallback). Game-exe picker highlights `.exe` files and starts in the last-used folder.
 - `Open folder` buttons are acknowledged no-ops (folders live on the host).
 - `Play` launches the game **on the host**.
 - `install-mod-from-zip` uses a local file picker + upload under the hood.

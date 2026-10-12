@@ -92,9 +92,26 @@
     }
   }
 
-  function askHostPath(title, current) {
-    const hint = current ? ` (current: ${current})` : "";
-    const v = window.prompt(`${title}${hint}\nEnter a folder path ON THE HOST PC:`, current || "");
+  // Host path picker: modal file browser, with prompt() fallback for old hosts.
+  async function askHostPath({ title, sub, mode, startKey, fallbackDir, extensions, rememberKey }) {
+    const remembered = (startKey && window.localStorage.getItem(startKey)) || "";
+    let startDir = remembered || fallbackDir || "";
+    if (window.__jjkmmBrowse) {
+      try {
+        const picked = await window.__jjkmmBrowse({ mode, title, sub, startDir, extensions, rememberKey: startKey });
+        if (picked && startKey) {
+          try {
+            // Remember the containing folder for next time (file) or the dir itself.
+            const dir = mode === "file" ? picked.slice(0, Math.max(picked.lastIndexOf("\\"), picked.lastIndexOf("/"))) : picked;
+            if (dir) window.localStorage.setItem(startKey, dir);
+          } catch { /* storage optional */ }
+        }
+        return picked;
+      } catch (e) {
+        console.warn("[remote] file browser failed, falling back to prompt:", e.message);
+      }
+    }
+    const v = window.prompt(`${title}\nEnter a path ON THE HOST PC:`, startDir);
     if (v === null) return null;
     const t = v.trim();
     return t ? t : null;
@@ -212,7 +229,20 @@
   window.modManagerApi = {
     initApp: () => call("init-app"),
     changeGameLocation: async () => {
-      const p = askHostPath("Game executable path on the HOST PC");
+      // Prefer the host's current exe dir as the browser start location.
+      let exeStart = "";
+      try {
+        const st = await call("get-setup-status");
+        if (st && st.exeDir) exeStart = st.exeDir;
+      } catch { /* advisory */ }
+      const p = await askHostPath({
+        title: "Select game executable",
+        sub: "Browse the host PC and double-click Jujutsu Kaisen CC.exe",
+        mode: "file",
+        extensions: [".exe"],
+        startKey: "jjkmm.lastGameDir",
+        fallbackDir: exeStart,
+      });
       if (!p) return { cancelled: true };
       return call("change-game-location", [p]);
     },
@@ -221,13 +251,23 @@
     enableAllMods: () => call("enable-all-mods"),
     disableAllMods: () => call("disable-all-mods"),
     setModsFolderOverride: async () => {
-      const p = askHostPath("Mods folder override (path on HOST PC)");
+      const p = await askHostPath({
+        title: "Select mods folder override",
+        sub: "Browse the host PC, open the folder, then confirm",
+        mode: "folder",
+        startKey: "jjkmm.lastModsDir",
+      });
       if (!p) return { cancelled: true };
       return call("set-mods-folder-override", [p]);
     },
     clearModsFolderOverride: () => call("clear-mods-folder-override"),
     setUnpackedAssetsPath: async () => {
-      const p = askHostPath("Unpacked assets folder (path on HOST PC)");
+      const p = await askHostPath({
+        title: "Select unpacked assets folder",
+        sub: "Browse the host PC, open the folder, then confirm",
+        mode: "folder",
+        startKey: "jjkmm.lastUnpackedDir",
+      });
       if (!p) return { cancelled: true };
       return call("set-unpacked-assets-path", [p]);
     },

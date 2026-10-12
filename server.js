@@ -455,6 +455,66 @@ const methods = {
     }
   },
 
+  // ── Remote file browser ──────────────────────────────────────────────
+  // Lets a browser client walk the HOST filesystem to pick paths (game exe,
+  // mods override, unpacked assets) instead of typing them blind.
+
+  "browse-drives": async () => {
+    if (process.platform === "win32") {
+      const drives = [];
+      for (let c = 65; c <= 90; c++) {
+        const root = `${String.fromCharCode(c)}:\\`;
+        try {
+          const st = await fsp.stat(root);
+          if (st.isDirectory()) drives.push({ path: root, label: root });
+        } catch { /* drive absent */ }
+      }
+      return { drives, home: os.homedir(), sep: path.sep };
+    }
+    return { drives: [{ path: "/", label: "/ (root)" }], home: os.homedir(), sep: path.sep };
+  },
+
+  "browse-list": async ([dir]) => {
+    if (!dir || typeof dir !== "string") throw new Error("No directory provided.");
+    const resolved = path.resolve(dir);
+    let stat = null;
+    try {
+      stat = await fsp.stat(resolved);
+    } catch {
+      stat = null;
+    }
+    if (!stat) throw new Error(`Folder not found:\n${dir}`);
+    if (!stat.isDirectory()) throw new Error(`Not a folder:\n${dir}`);
+    let names;
+    try {
+      names = await fsp.readdir(resolved);
+    } catch (e) {
+      throw new Error(`Cannot read folder (permission?):\n${resolved}`);
+    }
+    const entries = [];
+    for (const name of names) {
+      if (name === "." || name === "..") continue;
+      const abs = path.join(resolved, name);
+      let st = null;
+      try {
+        st = await fsp.stat(abs);
+      } catch { continue; } // vanishing / forbidden entries are skipped
+      const isDir = st.isDirectory();
+      if (!isDir && !st.isFile()) continue;
+      entries.push({
+        name,
+        path: abs,
+        isDir,
+        size: isDir ? 0 : st.size,
+        mtimeMs: st.mtimeMs,
+      });
+      if (entries.length >= 5000) break;
+    }
+    entries.sort((a, b) => Number(b.isDir) - Number(a.isDir) || a.name.localeCompare(b.name));
+    const parent = path.dirname(resolved);
+    return { dir: resolved, parent: parent === resolved ? null : parent, entries };
+  },
+
   "renderer-ready": async () => [],
 };
 
