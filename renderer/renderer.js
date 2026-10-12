@@ -115,6 +115,20 @@ function emptyConflicts() {
   return { total: 0, truncated: false, conflicts: [], byMod: {}, scannedMods: 0, warnings: [] };
 }
 
+/* ── Async rendering helpers ────────────────────────────────────
+ * Large libraries / overlap lists build hundreds of DOM nodes. Doing it
+ * in one synchronous turn freezes the renderer. These helpers yield to
+ * the browser between batches so scrolling, clicks and paints stay alive.
+ */
+function yieldToRenderer() {
+  if (typeof requestAnimationFrame === "function") {
+    return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  }
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+let renderModsToken = 0;
+let renderConflictsToken = 0;
+
 document.addEventListener("click", () => {
   if (activeModToolsClose) {
     activeModToolsClose();
@@ -487,8 +501,9 @@ function buildModIcon(mod) {
   return wrap;
 }
 
-function renderMods() {
+async function renderMods() {
   if (!modListEl) return;
+  const myToken = ++renderModsToken;
   modListEl.innerHTML = "";
   updateCounts();
 
@@ -498,7 +513,11 @@ function renderMods() {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+  let batchCount = 0;
   for (const mod of visible) {
+    if (myToken !== renderModsToken) return; // superseded by a newer render
+    batchCount += 1;
     const li = document.createElement("li");
     li.className = `mod-item${mod.enabled ? " mod-item--on" : ""}`;
     li.dataset.modId = mod.id;
@@ -657,8 +676,16 @@ function renderMods() {
 
     footer.appendChild(buildToolsMenu(mod));
     li.appendChild(footer);
-    modListEl.appendChild(li);
+    fragment.appendChild(li);
+    // Flush to the DOM in batches so first paint appears fast and the
+    // UI never blocks on a huge library.
+    if (batchCount % 25 === 0) {
+      modListEl.appendChild(fragment);
+      await yieldToRenderer();
+      if (myToken !== renderModsToken) return;
+    }
   }
+  if (fragment.childNodes.length > 0) modListEl.appendChild(fragment);
 }
 
 function matchesCurrentFilter(mod) {
@@ -975,8 +1002,9 @@ function updateConflictTypeTabs(modFiltered) {
   if (conflictsTypeFilterEl) conflictsTypeFilterEl.hidden = modFiltered.length === 0;
 }
 
-function renderConflictsList() {
+async function renderConflictsList() {
   if (!conflictsListEl) return;
+  const myToken = ++renderConflictsToken;
   conflictsListEl.innerHTML = '';
 
   const modFiltered = getModFilteredConflicts();
@@ -1020,7 +1048,10 @@ function renderConflictsList() {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+  let n = 0;
   for (const c of list) {
+    if (myToken !== renderConflictsToken) return; // superseded
     const li = document.createElement("li");
     li.className = "conflict-item";
 
@@ -1056,8 +1087,14 @@ function renderConflictsList() {
       modsRow.appendChild(chip);
     }
     li.appendChild(modsRow);
-    conflictsListEl.appendChild(li);
+    fragment.appendChild(li);
+    if (++n % 50 === 0) {
+      conflictsListEl.appendChild(fragment);
+      await yieldToRenderer();
+      if (myToken !== renderConflictsToken) return;
+    }
   }
+  if (fragment.childNodes.length > 0) conflictsListEl.appendChild(fragment);
 }
 
 function conflictTypeHint(type) {
