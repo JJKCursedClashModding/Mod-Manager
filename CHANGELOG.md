@@ -2,6 +2,12 @@
 
 All notable changes to the JJK CC Mod Manager since `0.2.0`.
 
+## [0.3.3] — 2026-11-19
+
+### Fixes
+
+- **Invalid enum values no longer become a different value silently.** A datatable enum field whose value is not a member name or number (for example the quoted number `"4"`) was written as `0`, i.e. another valid member, with no message. The install now fails and names every bad value: `AttackDataTable1: row "CP_090_ATTACKA_01_01": field "AttackTransitionType": "4" is not a member of enum EGameAttackTransitionType`. Use a number (`4`) or the member name (`"Input"` / `"EGameAttackTransitionType::Input"`). All invalid rows of a table are listed in one error. Also applies to `parameters/*.json`.
+
 ## [0.3.2] — 2026-11-19
 
 Covers `0.3.0...0.3.2` (`0.3.1` was never released).
