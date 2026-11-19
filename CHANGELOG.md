@@ -2,7 +2,22 @@
 
 All notable changes to the JJK CC Mod Manager since `0.2.0`.
 
-## [Unreleased]
+## [0.3.2] — 2026-11-19
+
+Covers `0.3.0...0.3.2` (`0.3.1` was never released).
+
+### Fixes
+
+- **Game crash at boot after installing a mod that uses `"None"` in a name list** (`LowLevelFatalError … Bad name index -1`). A `"None"` (or empty) value inside an array/set/map FName field was written as name index -1 in tables whose stock name map has no `None` entry (e.g. `CharacterChatDataTable` `Id_ChatText` / `Id_Voice`). The cooked patcher now adds `None` to the name map when it is actually serialized, and refuses to write any FName that is not in the name map (the install fails with a clear error instead of producing a broken package).
+- **Datatable field names with the wrong capitalisation were silently dropped** (the stock value was kept). They are now applied to the real field, as UE does, and the install log shows a `[warn]` line per corrected field. Fields that match nothing in the row struct are reported as `[error] … does not exist in the table (ignored)`.
+
+### Other changes
+
+- Mods can ship a `scripts/` folder (ASI/DLL plugins + sidecars); its contents are deployed to the game's `scripts/` dir next to the exe (Ultimate ASI Loader). The overlap view can filter by type.
+- Packaging console reports datatable rows that were not found (skipped) and rows that were added.
+- Export remembers the last folder and defaults the file name from the mod manifest.
+- Footer paths replaced by an actionable status bar; a JSON check tool was added.
+- Mod, requirement, and render work yields to the event loop so the UI stays responsive.
 
 ### Setup wizard
 
