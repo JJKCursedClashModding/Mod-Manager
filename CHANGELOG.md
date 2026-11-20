@@ -2,6 +2,18 @@
 
 All notable changes to the JJK CC Mod Manager since `0.2.0`.
 
+## [0.3.4] — 2026-11-20
+
+### Fixes
+
+- **Names ending in `_<number>` added by mods now match the game's own names.** Unreal stores a name like `CN_230` as base `CN` plus a number, and code or other assets looking up `CN_230` expect that form. When the patched table had no `CN` entry yet, the patcher stored the whole text instead, which the game treats as a different name, so every lookup missed it silently. Symptoms: a crash when moving the character-select cursor onto an added character (`EXCEPTION_ACCESS_VIOLATION` reading `0x8`), blank added emblems in Customize → Emblem and the gallery, and the rewards popup re-granting the same items. 0.3.2 made it more visible: the case-variant duplicate-row workaround some mods relied on no longer added the base names. Mods using that workaround can drop it. Rebuild your mod pack after updating.
+- The same rule now applies to new keys in `parameters/*.json` and to asset-registry rows added by mods (package paths and asset names such as `T_Emblem_9001`).
+- **Keys that differ from a stock key only in letter case are caught.** The game treats `cn_041` and `CN_041` as the same key, so a "new" `parameters/*.json` key like that now fails with an error naming the stock key instead of silently overriding it. A registry row that differs from a stock asset only in case is skipped instead of being added twice.
+
+### Other changes
+
+- The rebuilt asset registry is now byte-identical to what the game's cooker produces (asset order and name hashes match Unreal exactly).
+
 ## [0.3.3] — 2026-11-19
 
 ### Fixes
