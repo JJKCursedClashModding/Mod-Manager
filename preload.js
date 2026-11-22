@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   clearUnpackedAssetsPath: () => ipcRenderer.invoke("clear-unpacked-assets-path"),
   packageAllMods: (modsFolder) => ipcRenderer.invoke("package-all-mods", modsFolder),
   installModFromZip: () => ipcRenderer.invoke("install-mod-from-zip"),
-  installModFromFile: (filePath) => ipcRenderer.invoke("install-mod-from-file", filePath),
+  installModFromFile: (filePath, options) => ipcRenderer.invoke("install-mod-from-file", filePath, options),
   previewModFile: (filePath) => ipcRenderer.invoke("preview-mod-file", filePath),
   notifyRendererReady: () => ipcRenderer.invoke("renderer-ready"),
   onOpenModFile: (callback) => {

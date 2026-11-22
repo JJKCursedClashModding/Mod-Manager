@@ -49,7 +49,7 @@ It scans your mod folders, lets you enable/disable mods, checks required runtime
 
 ### `.jjkmod` files
 
-A `.jjkmod` file is just a zip with a `.jjkmod` extension. It must contain either a single top-level mod folder or a root-level `manifest.json`. Installing from one follows the same rules as zip installs (newer `manifest.json` versions replace older ones, otherwise the install is skipped as up to date).
+A `.jjkmod` file is just a zip with a `.jjkmod` extension. It must contain either a single top-level mod folder or a root-level `manifest.json`. Installing from one follows the same rules as zip installs: newer `manifest.json` versions replace older ones, the same version is reinstalled (files replaced) after a confirmation prompt, and an older version is never installed over a newer one. `__MACOSX/` folders and dotfiles such as `.DS_Store` are ignored; archives with unsafe entry names (`..`, drive letters, invalid Windows characters) are rejected.
 
 The Windows installer associates `.jjkmod` with the app, so double-clicking a `.jjkmod` file installs it (the app opens/focuses and asks for confirmation first). The **Add mod** picker accepts both `.jjkmod` and `.zip`.
 
@@ -232,8 +232,8 @@ other). Each file is a datatables-style row dump mapping a **new ID** to its
 When you click **Install enabled mods**, the app:
 
 1. Resolves enabled mods and applies mod priority (low to high, high priority wins on conflicts).
-2. Clears the game `Content/Paks/~mods` folder for a clean deployment.
-3. Clears any stale `Content/DataTables/_ModManager` folder from older installs.
+2. Clears any stale `Content/DataTables/_ModManager` folder from older installs.
+3. Builds everything below in a staging folder; the game's `~mods` and `scripts/` folders are not touched until every step has succeeded.
 4. Combines `datatables/*.json` into a temp patch set.
 5. Builds merged `AssetRegistry.bin`.
 6. Stages loose assets from enabled mods.
@@ -243,8 +243,9 @@ When you click **Install enabled mods**, the app:
    - `build/output/zModLoader_P.pak`
    - `build/output/zModLoader_P.utoc`
    - `build/output/zModLoader_P.ucas`
-10. Copies generated files (plus any mod prebuilt packages) to:
-    - `Content/Paks/~mods`
+10. Copies generated files (plus any mod prebuilt packages) to `Content/Paks/~mods` and each mod's `scripts/` to the game `scripts/` folder, then removes files it installed earlier that are no longer needed.
+
+Installed files are tracked in a deploy manifest, `deploy-manifest.json` in the build folder (`build/` for source runs, `%APPDATA%\<app name>\build\` for the installed app). Files you put in `~mods` or `scripts/` yourself are never deleted. On the first run without a manifest, only the generated `zModLoader_P.*` files and byte-identical copies of library mods' prebuilt packages/scripts count as manager files. With no mods enabled the button reads **Remove installed mods** and removes only those files. Prebuilt packages named `zModLoader_P.*` fail the build; incomplete IoStore sets (a `.utoc`/`.ucas` without the other files) are skipped with a warning.
 
 ## Project Scripts
 

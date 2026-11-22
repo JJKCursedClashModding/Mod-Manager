@@ -99,6 +99,8 @@ let activeModToolsClose = null;
 let lastRequirements = [];
 let appVersion = null;
 let lastInstall = null; // { ok, count, time }
+/** True while "Install enabled mods" runs — mod installs wait until it ends. */
+let packagingBusy = false;
 
 // Library view state
 let allMods = [];
@@ -283,7 +285,7 @@ function confirmInstallMod({ title, version, exists, existingVersion, status }) 
       curEl.textContent = existingVersion ? `v${existingVersion}` : "present";
       installConfirmDetailEl.append(curEl);
       if (status === "same") {
-        installConfirmDetailEl.append(" — already up to date");
+        installConfirmDetailEl.append(" — same version, its files will be replaced (reinstall)");
       } else if (status === "update") {
         installConfirmDetailEl.append(" — will update");
       } else if (status === "older") {
@@ -591,27 +593,23 @@ async function renderMods() {
       syncToggleUi();
       toggle.disabled = true;
       toggleWrap.classList.add("mod-toggle--busy");
+      // Capture the intended action before any revert flips toggle.checked.
+      const wantEnabled = toggle.checked;
       try {
-        const res = await window.modManagerApi.setModEnabled(mod.id, toggle.checked);
-        mod.enabled = toggle.checked;
+        const res = await window.modManagerApi.setModEnabled(mod.id, wantEnabled);
+        mod.enabled = wantEnabled;
         if (res && res.conflicts) {
           currentConflicts = res.conflicts;
           updateConflictsUI();
           updateConflictBadges();
         }
         updateCounts();
-        const enabledCount = allMods.filter((m) => m.enabled).length;
-        if (packageAllBtn) {
-          packageAllBtn.disabled = !currentModsFolder || enabledCount === 0;
-          packageAllBtn.title = enabledCount
-            ? `Merge and install ${enabledCount} enabled mod${enabledCount === 1 ? "" : "s"} into the game`
-            : "Enable at least one mod first";
-        }
+        updatePackageAllButton();
         if (!matchesCurrentFilter(mod)) renderMods();
       } catch {
-        toggle.checked = !toggle.checked;
+        toggle.checked = !wantEnabled;
         syncToggleUi();
-        toastError("Toggle failed", `Could not ${toggle.checked ? "enable" : "disable"} "${mod.title}".`);
+        toastError("Toggle failed", `Could not ${wantEnabled ? "enable" : "disable"} "${mod.title}".`);
       } finally {
         toggle.disabled = false;
         toggleWrap.classList.remove("mod-toggle--busy");
@@ -804,7 +802,7 @@ function buildToolsMenu(mod) {
       const bad = result && Array.isArray(result.errors) ? result.errors.length : 0;
       const total = result && Array.isArray(result.checked) ? result.checked.length : 0;
       if (bad > 0) {
-        toastError("JSON errors found", `${bad} of ${total} file${total === 1 ? "" : "s"} in “${mod.title}” failed to parse.`);
+        toastError("JSON errors found", `${bad} of ${total} file${total === 1 ? "" : "s"} in “${mod.title}” have errors.`);
       } else if (total === 0) {
         toastInfo("No JSON files", `“${mod.title}” contains no .json files to check.`);
       } else {
@@ -1104,7 +1102,7 @@ function conflictTypeHint(type) {
     case "asset": return "Same assets/ path in 2+ mods — higher priority file overwrites";
     case "pakAsset": return "Same pak_assets/ path in 2+ mods — higher priority file overwrites";
     case "scripts": return "Same scripts/ path in 2+ mods — higher priority file overwrites in game scripts/";
-    case "registry": return "Same AssetRegistry objectName in 2+ mods — higher priority entry wins";
+    case "registry": return "Same AssetRegistry asset (packageName + objectName) in 2+ mods — higher priority entry wins";
     case "prebuilt": return "Same prebuilt package file name in 2+ mods — higher priority file overwrites in ~mods";
     default: return "Overlapping file between enabled mods";
   }
@@ -1124,16 +1122,19 @@ function setJsonCheckModalOpen(open) {
 function renderJsonCheckResults(mod, result) {
   const checked = (result && Array.isArray(result.checked) ? result.checked : []).slice().sort((a, b) => a.localeCompare(b));
   const errors = result && Array.isArray(result.errors) ? result.errors : [];
+  const warnings = result && Array.isArray(result.warnings) ? result.warnings : [];
   const badSet = new Set(errors.map((e) => e && e.file));
+  const warnSet = new Set(warnings.map((w) => w && w.file).filter((f) => !badSet.has(f)));
   const title = (mod && (mod.title || mod.id)) || (result && result.modId) || "Mod";
   if (jsonCheckHeadingEl) jsonCheckHeadingEl.textContent = `JSON check — ${title}`;
   if (jsonCheckSubEl) {
+    const warnNote = warnSet.size ? ` ${warnSet.size} file${warnSet.size === 1 ? " has a warning" : "s have warnings"}.` : "";
     if (!checked.length) {
       jsonCheckSubEl.textContent = "No .json files found in this mod.";
     } else if (!errors.length) {
-      jsonCheckSubEl.textContent = `All ${checked.length} JSON file${checked.length === 1 ? "" : "s"} are valid.`;
+      jsonCheckSubEl.textContent = `All ${checked.length} JSON file${checked.length === 1 ? "" : "s"} are valid.${warnNote}`;
     } else {
-      jsonCheckSubEl.textContent = `${errors.length} of ${checked.length} JSON file${checked.length === 1 ? "" : "s"} failed to parse — fix these before packaging.`;
+      jsonCheckSubEl.textContent = `${errors.length} of ${checked.length} JSON file${checked.length === 1 ? "" : "s"} have errors — fix these before packaging.${warnNote}`;
     }
   }
   if (!jsonCheckListEl) return;
@@ -1147,18 +1148,22 @@ function renderJsonCheckResults(mod, result) {
   }
   const ordered = [
     ...checked.filter((f) => badSet.has(f)),
-    ...checked.filter((f) => !badSet.has(f)),
+    ...checked.filter((f) => warnSet.has(f)),
+    ...checked.filter((f) => !badSet.has(f) && !warnSet.has(f)),
   ];
   const errorByFile = new Map(errors.map((e) => [e && e.file, e && e.message]));
+  const warningByFile = new Map(warnings.map((w) => [w && w.file, w && w.message]));
   for (const file of ordered) {
     const bad = badSet.has(file);
+    const warn = !bad && warnSet.has(file);
+    const kind = bad ? "error" : warn ? "warn" : "ok";
     const li = document.createElement("li");
-    li.className = `json-check-item${bad ? " json-check-item--error" : " json-check-item--ok"}`;
+    li.className = `json-check-item json-check-item--${kind}`;
     const top = document.createElement("div");
     top.className = "json-check-top";
     const badge = document.createElement("span");
-    badge.className = `json-check-badge${bad ? " json-check-badge--error" : " json-check-badge--ok"}`;
-    badge.textContent = bad ? "Error" : "OK";
+    badge.className = `json-check-badge json-check-badge--${kind}`;
+    badge.textContent = bad ? "Error" : warn ? "Warning" : "OK";
     top.appendChild(badge);
     const name = document.createElement("span");
     name.className = "json-check-file";
@@ -1170,6 +1175,11 @@ function renderJsonCheckResults(mod, result) {
       const msg = document.createElement("div");
       msg.className = "json-check-error";
       msg.textContent = errorByFile.get(file) || "Invalid JSON.";
+      li.appendChild(msg);
+    } else if (warn) {
+      const msg = document.createElement("div");
+      msg.className = "json-check-error json-check-error--warn";
+      msg.textContent = warningByFile.get(file) || "";
       li.appendChild(msg);
     }
     jsonCheckListEl.appendChild(li);
@@ -1295,7 +1305,7 @@ function updateStatusBar() {
   else if (!currentModsFolder) hint = "Could not find mods folder — check Settings";
   else if (issues.length > 0) hint = "Requirements need attention — click status to fix";
   else if (total === 0) hint = "Drop mod folders into Content/Mods — or Add mod from file";
-  else if (enabled === 0) hint = "All mods disabled — enable at least one to install";
+  else if (enabled === 0) hint = "All mods disabled — enable mods to install, or use Remove installed mods to clear them from the game";
   else if (overlaps > 0) hint = `${overlaps} overlap${overlaps === 1 ? "" : "s"} — higher priority wins, click to inspect`;
   else if (lastInstall) {
     hint = lastInstall.ok
@@ -1791,6 +1801,26 @@ runSetupWizardBtn?.addEventListener("click", () => {
 
 /* ── State ──────────────────────────────────────────────── */
 
+/**
+ * Primary CTA state. With 0 enabled mods it stays clickable and becomes
+ * "Remove installed mods": the build then removes only the files this
+ * manager deployed (tracked in its deploy manifest), never other files.
+ */
+function updatePackageAllButton() {
+  if (!packageAllBtn) return;
+  const enabledCount = allMods.filter((m) => m.enabled).length;
+  packageAllBtn.disabled = !currentModsFolder || packagingBusy;
+  const label = packageAllBtn.querySelector("span");
+  if (enabledCount > 0) {
+    if (label) label.textContent = "Install enabled mods";
+    packageAllBtn.title = `Merge and install ${enabledCount} enabled mod${enabledCount === 1 ? "" : "s"} into the game`;
+  } else {
+    if (label) label.textContent = "Remove installed mods";
+    packageAllBtn.title =
+      "Remove installed mods from the game (only files this manager installed; other files in ~mods and scripts/ are left alone)";
+  }
+}
+
 function setBulkBusy(busy) {
   for (const b of [refreshModsBtn, enableAllModsBtn, disableAllModsBtn]) {
     if (b) b.disabled = busy || !currentModsFolder;
@@ -1809,8 +1839,8 @@ function applyState(result) {
   currentConflicts = result.conflicts && typeof result.conflicts === "object" ? result.conflicts : emptyConflicts();
   updateConflictsUI();
 
-  packageAllBtn.disabled = !hasModsRoot || allMods.filter((m) => m.enabled).length === 0;
-  if (installModBtn) installModBtn.disabled = !hasModsRoot;
+  updatePackageAllButton();
+  if (installModBtn) installModBtn.disabled = !hasModsRoot || packagingBusy;
   if (launchGameBtn) launchGameBtn.disabled = !result.gameLocation;
   if (openModsFolderBtn) openModsFolderBtn.disabled = !hasModsRoot;
 
@@ -1824,14 +1854,6 @@ function applyState(result) {
     result.unpackedAssetsPath || null,
     result.modsFolderOverride || null,
   );
-
-  // Refresh the primary CTA tooltip with the enabled count.
-  const enabledCount = allMods.filter((m) => m.enabled).length;
-  if (packageAllBtn) {
-    packageAllBtn.title = enabledCount
-      ? `Merge and install ${enabledCount} enabled mod${enabledCount === 1 ? "" : "s"} into the game`
-      : "Enable at least one mod first";
-  }
 
   renderMods();
   setBulkBusy(false);
@@ -1847,6 +1869,9 @@ async function init() {
       window.modManagerApi.initApp(),
       checkAndRenderAppUpdateStatus(),
     ]);
+    if (result && result.configWarning) {
+      toastError("Settings file was damaged", result.configWarning);
+    }
     if (result && result.error && !result.gameLocation) {
       renderSkeletons(0);
       modListEl.innerHTML = "";
@@ -2007,7 +2032,8 @@ let addModBusy = false;
 const pendingOpenFiles = [];
 
 function processPendingOpenFiles() {
-  if (!appReady || addModBusy || pendingOpenFiles.length === 0 || !currentModsFolder) return;
+  // Installs replace mod folders a running build is reading — wait for it.
+  if (!appReady || addModBusy || packagingBusy || pendingOpenFiles.length === 0 || !currentModsFolder) return;
   installModFile(pendingOpenFiles.shift());
 }
 
@@ -2016,8 +2042,11 @@ function processPendingOpenFiles() {
  * path (OS file association / drag source). Sequential via addModBusy.
  */
 async function installModFile(explicitPath) {
-  if (addModBusy) {
+  if (addModBusy || packagingBusy) {
     if (explicitPath) pendingOpenFiles.unshift(explicitPath);
+    if (packagingBusy) {
+      toastInfo("Install queued", "Mods are being installed into the game. The mod file will be added when that finishes.");
+    }
     return;
   }
   if (!currentModsFolder) {
@@ -2029,6 +2058,7 @@ async function installModFile(explicitPath) {
   installModBtn.disabled = true;
   try {
     // OS file association (.jjkmod double-click): confirm before unzipping.
+    let confirmedStatus = null;
     if (explicitPath) {
       let promptInfo = { title: basenameOfPath(explicitPath) };
       try {
@@ -2048,21 +2078,44 @@ async function installModFile(explicitPath) {
       }
       const ok = await confirmInstallMod(promptInfo);
       if (!ok) return;
+      confirmedStatus = promptInfo.status;
     }
-    const result = explicitPath
-      ? await window.modManagerApi.installModFromFile(explicitPath)
+    let result = explicitPath
+      ? await window.modManagerApi.installModFromFile(explicitPath, { allowReinstall: confirmedStatus === "same" })
       : await window.modManagerApi.installModFromZip();
     if (result.cancelled) return;
+    // Same version picked via "Add mod": ask before replacing its files.
+    if (result.action === "unchanged" && result.reason === "same" && !explicitPath && result.zipPath) {
+      const ok = await confirmInstallMod({
+        title: result.modFolderName,
+        version: result.incomingVersion,
+        exists: true,
+        existingVersion: result.existingVersion,
+        status: "same",
+      });
+      if (!ok) return;
+      result = await window.modManagerApi.installModFromFile(result.zipPath, { allowReinstall: true });
+      if (result.cancelled) return;
+    }
     if (result.action === "unchanged") {
-      toastInfo(
-        "Already up to date",
-`"${result.modFolderName}" is already at v${result.incomingVersion || result.existingVersion || "?"}.`,
-      );
+      if (result.reason === "older") {
+        toastInfo(
+          "Newer version installed",
+          `"${result.modFolderName}" v${result.existingVersion || "?"} is installed; v${result.incomingVersion || "?"} is older, so it was not installed.`,
+        );
+      } else {
+        toastInfo(
+          "Already up to date",
+          `"${result.modFolderName}" is already at v${result.incomingVersion || result.existingVersion || "?"}.`,
+        );
+      }
       return;
     }
     applyState(result);
     if (result.action === "updated") {
       toastSuccess("Mod updated", `"${result.modFolderName}" → v${result.incomingVersion} (was v${result.existingVersion}).`);
+    } else if (result.action === "reinstalled") {
+      toastSuccess("Mod reinstalled", `"${result.modFolderName}" v${result.incomingVersion || "?"} was reinstalled.`);
     } else {
       toastSuccess("Mod added", `"${result.modFolderName}" (v${result.incomingVersion || "?"}) added to your library.`);
     }
@@ -2070,7 +2123,7 @@ async function installModFile(explicitPath) {
     toastError("Could not add mod", error.message);
   } finally {
     addModBusy = false;
-    installModBtn.disabled = !currentModsFolder;
+    installModBtn.disabled = !currentModsFolder || packagingBusy;
     processPendingOpenFiles();
   }
 }
@@ -2168,15 +2221,22 @@ window.modManagerApi.onPackageProgress?.((payload) => {
 });
 
 packageAllBtn?.addEventListener("click", async () => {
-  if (!currentModsFolder) return;
+  if (!currentModsFolder || packagingBusy) return;
+  const removingAll = allMods.filter((m) => m.enabled).length === 0;
 
+  packagingBusy = true;
   packageAllBtn.disabled = true;
+  if (installModBtn) installModBtn.disabled = true;
   packageModalCanClose = false;
   if (closePackageModalBtn) closePackageModalBtn.disabled = true;
   if (packageConsoleEl) packageConsoleEl.textContent = "";
-  setPackageModalTitle("Install enabled mods");
+  setPackageModalTitle(removingAll ? "Remove installed mods" : "Install enabled mods");
   setPackageProgress(0, "Starting");
-  appendPackageLog("[info] Installing enabled mods into the game…");
+  appendPackageLog(
+    removingAll
+      ? "[info] No mods enabled — removing files this manager installed into the game…"
+      : "[info] Installing enabled mods into the game…",
+  );
   setPackageModalOpen(true);
 
   try {
@@ -2185,17 +2245,23 @@ packageAllBtn?.addEventListener("click", async () => {
     if (output.gamePaksModsDir) appendPackageLog(`[done] Game folder: ${output.gamePaksModsDir}`);
     lastInstall = { ok: true, count: output && typeof output.count === "number" ? output.count : allMods.filter((m) => m.enabled).length, time: Date.now() };
     updateStatusBar();
-    toastSuccess("Mods installed", "Enabled mods were merged and installed into the game. You're ready to play!");
+    if (removingAll) {
+      toastSuccess("Mods removed", "Files this manager installed were removed from the game. Other files were left alone.");
+    } else {
+      toastSuccess("Mods installed", "Enabled mods were merged and installed into the game. You're ready to play!");
+    }
   } catch (error) {
     appendPackageLog(`[error] ${error.message}`);
     lastInstall = { ok: false, count: 0, time: Date.now() };
     updateStatusBar();
-    toastError("Install failed", error.message);
+    toastError(removingAll ? "Remove failed" : "Install failed", error.message);
   } finally {
-    const enabledCount = allMods.filter((m) => m.enabled).length;
-    packageAllBtn.disabled = !currentModsFolder || enabledCount === 0;
+    packagingBusy = false;
+    updatePackageAllButton();
+    if (installModBtn) installModBtn.disabled = !currentModsFolder;
     packageModalCanClose = true;
     if (closePackageModalBtn) closePackageModalBtn.disabled = false;
+    processPendingOpenFiles();
   }
 });
 

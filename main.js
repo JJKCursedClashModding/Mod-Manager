@@ -4,7 +4,7 @@ app.setName("Jujutsu Kaisen Cursed Clash Mod Manager");
 app.disableHardwareAcceleration();
 
 const path = require("path");
-const { registerIpcHandlers } = require("./lib/ipcHandlers");
+const { registerIpcHandlers, isBuildInProgress, libraryLock } = require("./lib/ipcHandlers");
 
 const MOD_FILE_PATTERN = /\.(jjkmod|zip)$/i;
 
@@ -26,6 +26,11 @@ function collectModFilesFromArgv(argv) {
 
 function flushPendingModFiles() {
   if (!mainWin || mainWin.webContents.isLoading() || !rendererReady || pendingModFiles.length === 0) {
+    return;
+  }
+  // Installing replaces mod folders the build is reading: hold OS-opened
+  // files until the build finishes (flushed again on the lock's idle event).
+  if (isBuildInProgress()) {
     return;
   }
   const files = pendingModFiles.splice(0, pendingModFiles.length);
@@ -81,6 +86,7 @@ function createWindow() {
 }
 
 registerIpcHandlers();
+libraryLock.on("idle", () => flushPendingModFiles());
 
 // Renderer calls this once `onOpenModFile` is subscribed. Returns any
 // .jjkmod files that arrived before the subscription existed (cold start
