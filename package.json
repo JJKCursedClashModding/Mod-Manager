@@ -1,7 +1,7 @@
 {
   "name": "jjkccmodmanager",
   "productName": "JJK CC Mod Manager",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Mod Manager App for Jujutsu Kaisen CC",
   "main": "main.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "prebuild": "npm run patcher:build",
     "build": "electron-builder --win --x64",
     "prebuild:portable": "npm run patcher:build",
-    "build:portable": "electron-builder --win portable --x64"
+    "build:portable": "electron-builder --win portable --x64",
+    "test": "node --test test/*.test.js"
   },
   "build": {
     "appId": "com.jjkcc.modmanager",

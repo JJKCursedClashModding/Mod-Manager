@@ -35,21 +35,21 @@
           </span>
 
           <div class="btn-group">
-            <button type="button" id="openSettingsBtn" class="btn btn-ghost" title="Settings">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2L3.4 12.6"/></svg>
-              <span>Settings</span>
+            <button type="button" id="openSettingsBtn" class="btn btn-ghost btn-icon" title="Settings" aria-label="Settings">
+              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2L3.4 12.6"/></svg>
             </button>
-            <button type="button" id="openModsFolderBtn" class="btn btn-ghost" disabled title="Open mods folder in Explorer">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5a1 1 0 0 1 1-1h3l1.5 2h6a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1z"/></svg>
-              <span>Mods folder</span>
-            </button>
-<button type="button" id="installModBtn" class="btn btn-ghost" disabled title="Add a mod from a .zip file to your library">
+<button type="button" id="installModBtn" class="btn btn-ghost" disabled aria-label="Add mod" title="Add a mod from a .zip file to your library">
 <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2.5v11M2.5 8h11"/></svg>
 <span>Add mod</span>
             </button>
+            <span class="btn-sep" aria-hidden="true"></span>
+            <button type="button" id="installStatusBtn" class="install-status" hidden title="Compare enabled mods with the last install">
+              <span class="status-dot" id="installStatusDot"></span>
+              <span id="installStatusText">Checking…</span>
+            </button>
 <button type="button" id="packageAllBtn" class="btn btn-primary" disabled title="Merge enabled mods and install them into the game">
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5 14 5v6l-6 3.5L2 11V5z"/><path d="M2 5l6 3.5L14 5M8 8.5V14"/></svg>
-<span>Install enabled mods</span>
+              <span class="btn-icon-slot" id="packageAllIcon" aria-hidden="true"></span>
+<span>Install mods</span>
             </button>
             <button type="button" id="launchGameBtn" class="btn btn-play" disabled title="Launch the game">
               <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 2.5v11l8-5.5z"/></svg>
@@ -88,16 +88,21 @@
         </div>
 
         <div class="toolbar-right">
-          <button type="button" id="conflictsBtn" class="btn btn-small conflicts-btn" hidden title="Show files that overlap between enabled mods">
+          <button type="button" id="conflictsBtn" class="btn btn-small conflicts-btn" hidden title="Show conflicts between enabled mods">
             <span aria-hidden="true">⚠</span>
-            <span id="conflictsCount">0 overlaps</span>
+            <span id="conflictsCount">0 conflicts</span>
           </button>
-          <button type="button" id="refreshModsBtn" class="btn btn-small btn-ghost" disabled title="Rescan mods folder">
-            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.5v3h-3"/></svg>
-            <span>Refresh</span>
-          </button>
-          <button type="button" id="enableAllModsBtn" class="btn btn-small btn-ghost" disabled>Enable all</button>
-          <button type="button" id="disableAllModsBtn" class="btn btn-small btn-ghost" disabled>Disable all</button>
+          <div class="overflow-wrap">
+            <button type="button" id="moreActionsBtn" class="btn btn-small btn-ghost btn-icon" aria-haspopup="menu" aria-expanded="false" aria-label="More library actions" title="More library actions">
+              <span aria-hidden="true">⋯</span>
+            </button>
+            <div id="moreActionsMenu" class="mod-tools-menu overflow-menu" role="menu" hidden>
+              <button type="button" id="refreshModsBtn" class="mod-tools-menu-item" role="menuitem" disabled title="Rescan mods folder"><span aria-hidden="true">↻</span><span>Refresh library</span></button>
+              <button type="button" id="enableAllModsBtn" class="mod-tools-menu-item" role="menuitem" disabled><span aria-hidden="true">✓</span><span>Enable all mods</span></button>
+              <button type="button" id="disableAllModsBtn" class="mod-tools-menu-item" role="menuitem" disabled><span aria-hidden="true">○</span><span>Disable all mods</span></button>
+              <button type="button" id="openModsFolderBtn" class="mod-tools-menu-item" role="menuitem" disabled title="Open mods folder in Explorer"><span aria-hidden="true">📁</span><span>Open mods folder</span></button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -116,10 +121,6 @@
         <span class="status-item status-hint" id="statusHint">Tip: higher priority mods win file conflicts</span>
         <span class="status-spacer"></span>
         <span class="status-item status-meta" id="statusLibrary" title="Enabled / total mods">0 / 0 enabled</span>
-        <button type="button" class="status-overlaps-btn" id="statusOverlapsBtn" hidden title="Show overlapping files">
-          <span aria-hidden="true">⚠</span>
-          <span id="statusOverlapsText">0 overlaps</span>
-        </button>
         <span class="status-sep" aria-hidden="true"></span>
         <button type="button" class="status-version" id="statusVersionBtn" title="App version">v…</button>
       </footer>
@@ -138,7 +139,7 @@
 
         <div class="settings-grid">
           <div class="setting-card">
-            <h3 class="setting-card-title">Game</h3>
+            <h3 class="setting-card-title">Game executable</h3>
             <p id="gameFolderPath" class="path-line" hidden></p>
             <div class="setting-row">
               <button type="button" id="changePathBtn" class="btn btn-small btn-secondary">Change game EXE…</button>
@@ -275,18 +276,19 @@
       <section class="modal-panel" aria-labelledby="conflictsHeading" role="dialog" aria-modal="true">
         <div class="modal-head">
           <div>
-            <h2 id="conflictsHeading" class="modal-title">Overlapping files</h2>
-            <p id="conflictsSub" class="modal-sub">Enabled mods writing to the same path or row</p>
+            <h2 id="conflictsHeading" class="modal-title">Conflicts</h2>
+            <p id="conflictsSub" class="modal-sub">Enabled mods setting the same thing to different values</p>
           </div>
           <div class="modal-head-actions">
             <button type="button" id="conflictsShowAllBtn" class="btn btn-small btn-secondary" hidden>Show all</button>
             <button type="button" id="closeConflictsBtn" class="btn btn-small btn-ghost">✕ Close</button>
           </div>
         </div>
-        <p class="conflicts-note">Only <strong>enabled</strong> mods are checked. When mods overlap, the <strong>higher priority</strong> mod wins — the winner is marked below. Raise a mod's <code>priority</code> in its <code>manifest.json</code> to make it win.</p>
-        <div class="segmented conflicts-type-filter" id="conflictsTypeFilter" role="tablist" aria-label="Filter overlaps by type">
+        <p class="conflicts-note">Only <strong>enabled</strong> mods are checked. DataTables are merged <strong>per field</strong>, so a conflict is two or more mods setting the same field of the same row to different values. The <strong>higher priority</strong> mod wins (★); on equal priority the mod whose folder name sorts last wins. Change a mod's priority on its card to pick the winner.</p>
+        <p id="conflictsCleanNote" class="conflicts-clean-note" hidden></p>
+        <div class="segmented conflicts-type-filter" id="conflictsTypeFilter" role="tablist" aria-label="Filter conflicts by type">
           <button type="button" class="segmented-btn is-active" data-conflict-type="all" role="tab" aria-selected="true">All</button>
-          <button type="button" class="segmented-btn" data-conflict-type="datatable" role="tab" aria-selected="false">Rows</button>
+          <button type="button" class="segmented-btn" data-conflict-type="datatable" role="tab" aria-selected="false">Fields</button>
           <button type="button" class="segmented-btn" data-conflict-type="parameter" role="tab" aria-selected="false">Parameters</button>
           <button type="button" class="segmented-btn" data-conflict-type="asset" role="tab" aria-selected="false">Assets</button>
           <button type="button" class="segmented-btn" data-conflict-type="pakAsset" role="tab" aria-selected="false">PAK</button>
@@ -294,7 +296,7 @@
           <button type="button" class="segmented-btn" data-conflict-type="registry" role="tab" aria-selected="false">Registry</button>
           <button type="button" class="segmented-btn" data-conflict-type="prebuilt" role="tab" aria-selected="false">Packages</button>
         </div>
-        <ul id="conflictsList" class="conflicts-list" aria-label="Overlapping files"></ul>
+        <ul id="conflictsList" class="conflicts-list" aria-label="Conflicts"></ul>
       </section>
     </div>
 
@@ -310,7 +312,22 @@
             <button type="button" id="closeJsonCheckBtn" class="btn btn-small btn-ghost">✕ Close</button>
           </div>
         </div>
+        <p id="jsonCheckNote" class="conflicts-note" hidden></p>
         <ul id="jsonCheckList" class="json-check-list" aria-label="JSON check results"></ul>
+      </section>
+    </div>
+
+    <!-- ══ Choice dialog (Play with stale install, Remove confirm) ═════ -->
+    <div id="choiceModal" class="modal-overlay" hidden>
+      <section class="modal-panel modal-narrow" aria-labelledby="choiceHeading" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <div>
+            <h2 id="choiceHeading" class="modal-title"></h2>
+            <p id="choiceText" class="modal-sub choice-text"></p>
+          </div>
+        </div>
+        <ul id="choiceList" class="choice-list" hidden></ul>
+        <div id="choiceButtons" class="choice-buttons"></div>
       </section>
     </div>
 
@@ -334,6 +351,7 @@
 
     <div id="toastRoot" class="toast-root" aria-live="polite" aria-atomic="false"></div>
 
+    <script src="./format.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

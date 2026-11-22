@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld("modManagerApi", {
   packageSingleMod: (modFolderPath, outPath) => ipcRenderer.invoke("package-single-mod", modFolderPath, outPath),
   createModManifest: (modFolderPath) => ipcRenderer.invoke("create-mod-manifest", modFolderPath),
   validateModJson: (modFolderPath) => ipcRenderer.invoke("validate-mod-json", modFolderPath),
+  setModPriority: (modFolderPath, priority) => ipcRenderer.invoke("set-mod-priority", modFolderPath, priority),
+  getInstallStatus: () => ipcRenderer.invoke("get-install-status"),
   setVerboseOutput: (verbose) => ipcRenderer.invoke("set-verbose-output", verbose),
   launchGame: () => ipcRenderer.invoke("launch-game"),
   checkRequirements: () => ipcRenderer.invoke("check-requirements"),

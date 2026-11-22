@@ -527,24 +527,6 @@ img.brand-logo {
   flex-wrap: wrap;
 }
 
-/* Per-mod overlap badge */
-.conflict-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  background: var(--warning-bg);
-  color: #ffd88a;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.conflict-badge:hover { background: rgba(251, 191, 36, 0.22); border-color: rgba(251, 191, 36, 0.7); }
-.conflict-badge:focus-visible { outline: 2px solid var(--warning); outline-offset: 2px; }
-
 /* Toolbar overlaps button */
 .conflicts-btn {
   background: var(--warning-bg);
@@ -840,25 +822,6 @@ img.brand-logo {
 .status-health:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .status-health span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status-meta { flex-shrink: 0; max-width: none; }
-.status-overlaps-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  background: var(--warning-bg);
-  color: #ffd88a;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.status-overlaps-btn:hover { background: rgba(251, 191, 36, 0.22); border-color: rgba(251, 191, 36, 0.7); }
-.status-overlaps-btn:focus-visible { outline: 2px solid var(--warning); outline-offset: 2px; }
-.status-overlaps-btn[hidden] { display: none; }
 .status-version {
   background: transparent;
   border: none;
@@ -1136,12 +1099,180 @@ img.brand-logo {
 .setup-footer { margin-top: 16px; align-items: center; }
 .setup-footer-spacer { flex: 1; }
 
+/* ── Topbar extras ───────────────────────────────────────── */
+/* One row: actions keep their size, the brand title shrinks/ellipsizes. */
+.topbar { flex-wrap: nowrap; }
+.brand { flex: 0 1 auto; min-width: 0; }
+.brand-text { min-width: 0; overflow: hidden; }
+.brand-text h1, .brand-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-actions { flex-wrap: nowrap; flex-shrink: 0; }
+.topbar-actions .btn-group { flex-wrap: nowrap; }
+.btn-icon { padding-left: 9px; padding-right: 9px; }
+.btn-icon.btn-small { padding-left: 8px; padding-right: 8px; }
+.btn-sep { width: 1px; align-self: stretch; margin: 4px 2px; background: var(--border); }
+.btn-icon-slot { display: inline-flex; width: 14px; height: 14px; }
+.btn-icon-slot:empty { display: none; }
+
+.btn-danger {
+  background: var(--danger-bg);
+  border-color: rgba(255, 107, 107, 0.55);
+  color: #ffb4b4;
+  font-weight: 700;
+}
+.btn-danger:hover:not(:disabled) { background: rgba(255, 107, 107, 0.22); border-color: rgba(255, 107, 107, 0.8); color: #ffd6d6; }
+.btn-danger:focus-visible { outline-color: var(--danger); }
+
+.install-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: default;
+}
+.install-status[hidden] { display: none; }
+.install-status span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.install-status--stale { color: #ffd88a; border-color: rgba(251, 191, 36, 0.45); background: var(--warning-bg); cursor: pointer; }
+.install-status--stale:hover { background: rgba(251, 191, 36, 0.2); }
+.install-status--ok { color: #8df0ae; }
+.install-status:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Toolbar ⋯ menu. The toolbar's backdrop-filter makes it a stacking
+   context, so lift the whole toolbar above the mod list for the menu. */
+.toolbar { position: relative; z-index: 20; }
+.overflow-wrap { position: relative; }
+.overflow-menu { min-width: 11.5rem; }
+.overflow-menu[hidden] { display: none; }
+
+/* Footer right side: priority + tools */
+.mod-footer-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.mod-priority-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--faint);
+  cursor: default;
+}
+.mod-priority-edit input {
+  width: 58px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+  background: rgba(10, 13, 22, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  outline: none;
+}
+.mod-priority-edit input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(109, 124, 255, 0.18); }
+.mod-priority-edit input:disabled { opacity: 0.5; }
+
+/* Conflicts: field values */
+.conflict-mod--same { opacity: 0.75; }
+.conflict-mod-value {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0 5px;
+  border-radius: 4px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conflict-tie {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffd88a;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 999px;
+  padding: 0 7px;
+  white-space: nowrap;
+}
+.conflicts-clean-note { margin: 0 0 10px; font-size: 11.5px; color: var(--faint); }
+.conflicts-clean-note[hidden] { display: none; }
+
+/* JSON check: collapsed OK files */
+.json-check-ok-group { padding: 0; }
+.json-check-ok-group > details > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.json-check-ok-group > details > summary::-webkit-details-marker { display: none; }
+.json-check-ok-group > details > summary::after { content: "▸"; margin-left: auto; color: var(--faint); }
+.json-check-ok-group > details[open] > summary::after { content: "▾"; }
+.json-check-ok-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px;
+  display: grid;
+  gap: 3px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* Choice dialog */
+.choice-text { white-space: pre-line; line-height: 1.5; }
+.choice-list {
+  margin: 0 0 14px;
+  padding: 8px 12px 8px 28px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  display: grid;
+  gap: 3px;
+}
+.choice-list[hidden] { display: none; }
+.choice-buttons { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+#choiceModal { z-index: 80; }
+
+/* Medium widths: keep the topbar and toolbar on one row each */
+@media (max-width: 1100px) {
+  #installModBtn > span { display: none; }
+  #installModBtn { padding-left: 9px; padding-right: 9px; }
+  .install-status { max-width: 170px; }
+  .sort-label { display: none; }
+  .toolbar { gap: 10px; }
+  .search-box { min-width: 140px; }
+}
+
+@media (max-width: 940px) {
+  .brand-text { display: none; }
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 760px) {
   body { overflow: auto; }
   .app-shell { height: auto; min-height: 100vh; padding: 0 12px; }
   .topbar { flex-direction: column; align-items: stretch; }
   .topbar-actions { justify-content: flex-start; }
+  .topbar-actions, .topbar-actions .btn-group { flex-wrap: wrap; }
   .btn-group .btn { flex: 1 1 auto; justify-content: center; }
   .toolbar { flex-direction: column; align-items: stretch; }
   .toolbar-right { margin-left: 0; }

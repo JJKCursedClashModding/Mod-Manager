@@ -2,6 +2,40 @@
 
 All notable changes to the JJK CC Mod Manager since `0.2.0`.
 
+## [0.4.0] — 2026-11-22
+
+### Mod merging and install
+
+- **Mods editing the same DataTable row are merged per field.** Two mods changing different fields of one row both apply. Only when they set the same field to different values does the higher-priority mod win. Table, parameter and registry names match case-insensitively.
+- **New rows keep the game's struct defaults** for fields the mod leaves out, instead of having them zeroed.
+- **Wrong-typed values fail the install with the row and field named** instead of being silently coerced. Examples: a non-integer on an int field, `"false"` on a bool, an enum number that isn't a member.
+- **Safer install.** Everything is built before the game folder is touched, then copied in one step. The manager tracks the files it installed and removes only those, so hand-placed paks and other ASI plugins are left alone. "Remove installed mods" works with no mods enabled.
+- **Safer zip install.** Paths that could escape the mod folder are rejected, and `__MACOSX` and dotfiles are ignored. You're asked before reinstalling the same version.
+- Settings are saved atomically with a backup and recovered if the file is corrupt. Quick toggles are no longer lost, and an install can't start while a build is running.
+- AssetRegistry rows now require a full `classPath` (e.g. `/Script/Engine.Texture2D`).
+
+### Interface
+
+- **Install status.** Next to Install you'll see "Up to date", "N changes not installed" or "Not installed yet"; click it to see what changed. Enabling or disabling a mod only takes effect after Install. Play now warns if there are changes you haven't installed and offers Install & Play.
+- **Conflicts show real conflicts.** A conflict is two mods setting the same field to different values. Each conflict shows every mod's value and which one the build uses. Rows that merge cleanly are counted but not listed.
+- **Check JSONs runs a test patch.** It patches each file the way the install does, writing nothing to the game, so it catches errors that would fail the build (e.g. invalid enum values). Problems are listed first; files that pass are collapsed.
+- **Set priority on the mod card.** The new box writes `priority` to the mod's `manifest.json`.
+- "Remove installed mods" is red and asks for confirmation.
+- Mod cards only show the content types a mod has, and no longer repeat the folder name.
+- Secondary toolbar actions (Refresh, Enable all, Disable all, Open mods folder) moved to a ⋯ menu.
+- Fixed versions showing as "vv3". Settings shows the full game exe path.
+
+### Patcher correctness (checked against the Unreal 5.1 source)
+
+- Fixed asset-registry writing for non-ASCII names, dependency data and package data.
+- Fixed cooked-table writing:
+  - struct property order (own fields first, then the parent's)
+  - fixed-size array fields
+  - map/set layout and enums inside containers
+  - non-ASCII names
+  - export sizes when a table grows
+- Every stock table still round-trips byte-identical.
+
 ## [0.3.4] — 2026-11-20
 
 ### Fixes
